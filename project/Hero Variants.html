@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Koom Week — Hero / Discovery Variations</title>
+<link rel="stylesheet" href="styles.css" />
+<style>
+  body { background: #f0eee9; }
+  .v-frame {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: var(--bg-page);
+    font-family: var(--font-en);
+    color: var(--ukf-ink);
+  }
+
+  /* === Variant A: Editorial Black === */
+  .vA { height: 100%; background: var(--ukf-ink); color: #fff; padding: 56px 64px; position: relative; overflow: hidden; }
+  .vA::after { content:""; position:absolute; inset:0; background: radial-gradient(ellipse 60% 40% at 100% 0%, rgba(200,16,46,0.2), transparent 60%); pointer-events:none; }
+  .vA-eyebrow { font: 600 12px/1 var(--font-en); letter-spacing: 0.16em; text-transform: uppercase; color: rgba(255,255,255,0.5); display:flex; align-items:center; gap: 12px; }
+  .vA-eyebrow .dot { width:8px; height:8px; border-radius:50%; background: var(--accent); }
+  .vA h1 { font: 700 120px/0.92 var(--font-en); letter-spacing: -0.045em; margin: 32px 0 0; }
+  .vA h1 .red { color: var(--accent); }
+  .vA .lead { font: 400 22px/1.5 var(--font-en); color: rgba(255,255,255,0.7); margin-top: 32px; max-width: 600px; }
+  .vA .stack { position: absolute; bottom: 56px; left: 64px; right: 64px; display:flex; align-items:end; justify-content:space-between; gap: 32px; padding-top: 32px; border-top: 1px solid rgba(255,255,255,0.15); }
+  .vA .ctas { display: flex; gap: 12px; }
+  .vA .stats { display: flex; gap: 48px; font: 400 14px/1.4 var(--font-en); color: rgba(255,255,255,0.55); }
+  .vA .stats b { display: block; color: #fff; font: 700 28px/1 var(--font-en); margin-bottom: 6px; letter-spacing:-0.01em; }
+
+  /* === Variant B: Hangul Display === */
+  .vB { height: 100%; background: var(--bg-page); padding: 64px; position: relative; }
+  .vB-grid { position: absolute; inset:0; background-image:
+    linear-gradient(to right, var(--ukf-hairline) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--ukf-hairline) 1px, transparent 1px);
+    background-size: 80px 80px; opacity: 0.5; }
+  .vB-content { position: relative; height: 100%; display:flex; flex-direction:column; justify-content:space-between; }
+  .vB .top-meta { display:flex; justify-content:space-between; font: 600 11px/1 var(--font-en); letter-spacing: 0.16em; text-transform: uppercase; color: var(--fg-2); }
+  .vB .top-meta .red { color: var(--accent); }
+  .vB-hangul {
+    text-align: center;
+    position: relative;
+    padding: 32px 0;
+  }
+  .vB-hangul .ko { font: 700 240px/0.9 var(--font-ko); color: var(--ukf-ink); letter-spacing:-0.04em; margin: 0; }
+  .vB-hangul .ko .dot { color: var(--accent); }
+  .vB-hangul .en {
+    font: 700 32px/1 var(--font-en); letter-spacing: 0.4em; text-transform: uppercase;
+    margin-top: 24px; color: var(--ukf-ink);
+  }
+  .vB-hangul .en .red { color: var(--accent); }
+  .vB-foot { display:grid; grid-template-columns: repeat(4, 1fr); gap: 32px; padding-top: 32px; border-top: 2px solid var(--ukf-ink); }
+  .vB-foot .col { display:flex; flex-direction:column; gap: 8px; }
+  .vB-foot .lbl { font: 600 10px/1 var(--font-en); letter-spacing: 0.16em; text-transform: uppercase; color: var(--fg-2); }
+  .vB-foot .val { font: 700 22px/1.15 var(--font-en); letter-spacing:-0.01em; }
+  .vB-cta { position:absolute; bottom: 64px; right: 64px; display:flex; gap: 12px; }
+
+  /* === Variant C: Magazine Split === */
+  .vC { height: 100%; display: grid; grid-template-columns: 1.2fr 1fr; }
+  .vC-left { background: var(--accent); color: #fff; padding: 56px 48px; position: relative; display:flex; flex-direction:column; }
+  .vC-left .meta { font: 600 11px/1 var(--font-en); letter-spacing: 0.16em; text-transform:uppercase; color: rgba(255,255,255,0.7); }
+  .vC-left h1 { font: 700 88px/0.95 var(--font-en); letter-spacing:-0.035em; margin: 32px 0 0; }
+  .vC-left h1 .stroke {
+    -webkit-text-stroke: 2px #fff;
+    color: transparent;
+    display: block;
+  }
+  .vC-left p { font: 400 18px/1.5 var(--font-en); color: rgba(255,255,255,0.85); margin-top: auto; max-width: 440px; }
+  .vC-left .corner { position: absolute; bottom: 56px; right: 48px; font: 700 14px/1 var(--font-en); letter-spacing: 0.16em; transform: rotate(-90deg); transform-origin: right bottom; }
+
+  .vC-right { background: var(--bg-page); padding: 56px 48px; display:flex; flex-direction:column; }
+  .vC-right .num { font: 700 13px/1 var(--font-en); letter-spacing: 0.06em; color: var(--accent); }
+  .vC-right h2 { font: 700 36px/1.1 var(--font-en); letter-spacing:-0.02em; margin: 12px 0 0; }
+  .vC-right .schedule { display:flex; flex-direction:column; gap:0; margin-top: 32px; }
+  .vC-right .row { display: grid; grid-template-columns: 64px 1fr auto; gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--ukf-hairline); align-items:center; }
+  .vC-right .row .day { font: 700 14px/1 var(--font-en); }
+  .vC-right .row .day .dow { display:block; font: 500 11px/1 var(--font-en); color: var(--fg-2); margin-bottom: 4px; }
+  .vC-right .row .title { font: 600 14px/1.3 var(--font-en); }
+  .vC-right .row .meta { font: 400 12px/1 var(--font-en); color: var(--fg-2); margin-top: 4px; }
+  .vC-right .row .pill { font: 600 10px/1 var(--font-en); padding: 4px 8px; border-radius: 999px; background: var(--bg-sunken); }
+  .vC-right .cta-row { display:flex; gap: 8px; margin-top: auto; padding-top: 24px; }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+
+<script type="text/babel">
+const { useState } = React;
+
+function VariantA() {
+  return (
+    <div className="vA v-frame">
+      <div className="vA-eyebrow"><span className="dot"></span>AUG 11 — 15, 2026 · ALL OF SEOUL</div>
+      <h1>Koom <span className="red">Week</span><br/>Seoul.</h1>
+      <p className="lead">A decentralized festival. Five days. Six neighborhoods. Hundreds of independently hosted events across K-Beauty, K-Entertainment, K-Food, and venture.</p>
+      <div className="stack">
+        <div className="ctas">
+          <button className="kw-btn kw-btn-accent">Browse Events →</button>
+          <button className="kw-btn kw-btn-ghost-light">Host an Event</button>
+        </div>
+        <div className="stats">
+          <div><b>28</b>events</div>
+          <div><b>2,400+</b>founders</div>
+          <div><b>6</b>neighborhoods</div>
+          <div><b>4</b>tracks</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function VariantB() {
+  return (
+    <div className="vB v-frame">
+      <div className="vB-grid"></div>
+      <div className="vB-content">
+        <div className="top-meta">
+          <span><span className="red">●</span> KOOM WEEK · 쿰 위크</span>
+          <span>SEOUL · 서울</span>
+          <span>VOL. 02 · AUG 2026</span>
+        </div>
+        <div className="vB-hangul">
+          <p className="ko">쿰<span className="dot">·</span>위크</p>
+          <p className="en">KOOM <span className="red">·</span> WEEK <span className="red">·</span> SEOUL</p>
+        </div>
+        <div className="vB-foot">
+          <div className="col">
+            <span className="lbl">Dates</span>
+            <span className="val">Aug 11—15, 2026</span>
+          </div>
+          <div className="col">
+            <span className="lbl">Tracks</span>
+            <span className="val">Beauty · Ent · Food · VC</span>
+          </div>
+          <div className="col">
+            <span className="lbl">Co-located</span>
+            <span className="val">Seoul POPCON</span>
+          </div>
+          <div className="col">
+            <span className="lbl">Presented by</span>
+            <span className="val">United Korean Founders</span>
+          </div>
+        </div>
+      </div>
+      <div className="vB-cta">
+        <button className="kw-btn kw-btn-accent">Browse Events →</button>
+        <button className="kw-btn kw-btn-ghost">Host an Event</button>
+      </div>
+    </div>
+  );
+}
+
+function VariantC() {
+  const items = [
+    { day: "Tue", date: "11", title: "Opening · The Next Leap of UKF", meta: "COEX Hall D · 18:00", pill: "VC" },
+    { day: "Wed", date: "12", title: "Webtoon → Global TV Adaptation Stack", meta: "CJ ENM · Sangam · 10:00", pill: "Ent" },
+    { day: "Thu", date: "13", title: "Korean Pantry Hackathon", meta: "Woowa Lab · Mapo · 10:00", pill: "Food" },
+    { day: "Fri", date: "14", title: "POPCON × Koom IP Buyers' Lunch", meta: "COEX Grand · 12:00", pill: "Ent" },
+    { day: "Sat", date: "15", title: "Closing Showcase + After-Party", meta: "S-Factory · Seongsu · 20:00", pill: "Ent" },
+  ];
+  return (
+    <div className="vC v-frame">
+      <div className="vC-left">
+        <div className="meta">● AUG 11—15 · 2026 · SEOUL</div>
+        <h1>
+          Five days.<br/>
+          <span className="stroke">Hundreds of</span><br/>
+          rooms.
+        </h1>
+        <p>UKF doesn't lock you in a convention center. We act as conductor. Korean conglomerates, indie founders, and global VCs host events across six Seoul neighborhoods — you build your own week.</p>
+        <div className="corner">KOOM·WEEK·26</div>
+      </div>
+      <div className="vC-right">
+        <div className="num">/ 01 — DAILY HIGHLIGHTS</div>
+        <h2>What's on this week.</h2>
+        <div className="schedule">
+          {items.map(it => (
+            <div className="row" key={it.date}>
+              <div className="day"><span className="dow">{it.day}</span>{it.date}</div>
+              <div>
+                <div className="title">{it.title}</div>
+                <div className="meta">{it.meta}</div>
+              </div>
+              <span className="pill">{it.pill}</span>
+            </div>
+          ))}
+        </div>
+        <div className="cta-row">
+          <button className="kw-btn kw-btn-primary">Browse all 28 events →</button>
+          <button className="kw-btn kw-btn-tertiary">Host an event</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <DesignCanvas>
+      <DCSection id="heroes" title="Hero · Three Directions"
+                 subtitle="All UKF-grounded. Same content, three rhetorical strategies. Tweaks panel in the main prototype lets accent color swap.">
+        <DCArtboard id="a" label="A · Editorial Black" width={1280} height={720}>
+          <VariantA />
+        </DCArtboard>
+        <DCArtboard id="b" label="B · Hangul Display" width={1280} height={720}>
+          <VariantB />
+        </DCArtboard>
+        <DCArtboard id="c" label="C · Magazine Split" width={1280} height={720}>
+          <VariantC />
+        </DCArtboard>
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
