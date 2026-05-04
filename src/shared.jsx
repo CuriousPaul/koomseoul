@@ -1,6 +1,9 @@
+import { useEffect, useRef, useState } from 'react';
 import { TRACKS, NEIGHBORHOODS } from './data.js';
 
 export function KwHeader({ active, onNav, lang, setLang, scheduleCount }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const hamburgerRef = useRef(null);
   const items = [
     { k: "home",      label: "Overview",    kr: "개요" },
     { k: "discover",  label: "Discover",    kr: "이벤트" },
@@ -8,35 +11,77 @@ export function KwHeader({ active, onNav, lang, setLang, scheduleCount }) {
     { k: "host",      label: "Host",        kr: "호스팅" },
     { k: "admin",     label: "Admin",       kr: "관리자" },
   ];
+
+  const closeMenu = ({ restoreFocus = false } = {}) => {
+    setMenuOpen(false);
+    if (restoreFocus) {
+      window.requestAnimationFrame(() => hamburgerRef.current?.focus());
+    }
+  };
+
+  const handleNav = (key) => {
+    onNav(key);
+    closeMenu({ restoreFocus: true });
+  };
+
+  const handleLang = (nextLang) => {
+    setLang(nextLang);
+    closeMenu({ restoreFocus: true });
+  };
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        closeMenu({ restoreFocus: true });
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [menuOpen]);
+
   return (
     <header className="kw-header">
       <div className="kw-header-inner">
-        <div className="kw-brand" onClick={() => onNav("home")}>
+        <button type="button" className="kw-brand" onClick={() => handleNav("home")} aria-label="Go to Koom Week Seoul overview">
           <img src="/assets/ukf-symbol-logo.svg" alt="UKF" />
           <span className="divider"></span>
           <span className="wordmark">KOOM<span className="red">·</span>WEEK <span style={{color:"var(--fg-2)", fontWeight:500}}>SEOUL'26</span></span>
-        </div>
-        <nav className="kw-nav">
+        </button>
+        <button
+          type="button"
+          className="kw-hamburger"
+          ref={hamburgerRef}
+          aria-expanded={menuOpen}
+          aria-controls="kw-mobile-nav"
+          aria-label={menuOpen ? "Close menu" : "Open menu"}
+          onClick={() => setMenuOpen(v => !v)}
+        >
+          <span className={`kw-hamburger-icon ${menuOpen ? 'open' : ''}`} />
+        </button>
+        <nav
+          className={`kw-nav ${menuOpen ? 'kw-nav-mobile-open' : ''}`}
+          id="kw-mobile-nav"
+          aria-label="Primary navigation"
+        >
           {items.map(it => (
-            <a key={it.k}
+            <button key={it.k}
+               type="button"
                className={`kw-nav-link ${active === it.k ? "active" : ""}`}
-               onClick={() => onNav(it.k)}>
-              {lang === "kr" ? it.kr : it.label}
+               aria-current={active === it.k ? "page" : undefined}
+               onClick={() => handleNav(it.k)}>
+              <span>{lang === "kr" ? it.kr : it.label}</span>
               {it.k === "schedule" && scheduleCount > 0 && (
-                <span style={{
-                  marginLeft: 6, padding: "2px 7px", borderRadius: 999,
-                  background: "var(--accent)", color: "#fff",
-                  font: "700 10px/1 var(--font-en)"
-                }}>{scheduleCount}</span>
+                <span className="kw-nav-count">{scheduleCount}</span>
               )}
-            </a>
+            </button>
           ))}
-          <span className="kw-lang">
-            <button className={lang === "en" ? "active" : ""} onClick={() => setLang("en")}>EN</button>
+          <span className="kw-lang kw-lang-mobile">
+            <button type="button" className={lang === "en" ? "active" : ""} onClick={() => handleLang("en")}>EN</button>
             <span className="sep">·</span>
-            <button className={lang === "kr" ? "active" : ""} onClick={() => setLang("kr")}>KR</button>
+            <button type="button" className={lang === "kr" ? "active" : ""} onClick={() => handleLang("kr")}>KR</button>
           </span>
-          <button className="kw-btn kw-btn-accent kw-btn-sm" onClick={() => onNav("host")}>
+          <button type="button" className="kw-btn kw-btn-accent kw-btn-sm kw-mobile-cta" onClick={() => handleNav("host")}>
             {lang === "kr" ? "이벤트 호스팅" : "Submit an Event"}
           </button>
         </nav>
