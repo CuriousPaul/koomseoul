@@ -8,6 +8,7 @@ import {
   syncSubmissions,
   persistLocal,
   loadLocalSubmissions,
+  loadPublishedEvents,
 } from './submissionService.js';
 
 const nowIso = () => new Date().toISOString();
@@ -65,6 +66,7 @@ export function useSubmissionWorkflow(reservedEventIds = new Set()) {
   const [submissions, setSubmissions] = useState(() => loadLocalSubmissions());
   const [backendMode, setBackendMode] = useState(false);
   const [hydrated, setHydrated] = useState(false);
+  const [publicEvents, setPublicEvents] = useState([]);
   const currentBackendMode = isBackendAvailable();
 
   useEffect(() => {
@@ -82,6 +84,15 @@ export function useSubmissionWorkflow(reservedEventIds = new Set()) {
   useEffect(() => {
     if (hydrated && !currentBackendMode) persistLocal(submissions);
   }, [submissions, currentBackendMode, hydrated]);
+
+  useEffect(() => {
+    if (!hydrated || !currentBackendMode) return;
+    let cancelled = false;
+    loadPublishedEvents().then((events) => {
+      if (!cancelled) setPublicEvents(events);
+    });
+    return () => { cancelled = true; };
+  }, [hydrated, currentBackendMode]);
 
   const createSubmission = useCallback((form) => {
     const at = nowIso();
@@ -176,9 +187,12 @@ export function useSubmissionWorkflow(reservedEventIds = new Set()) {
     setSubmissions(seedSubmissions());
   }, [backendMode]);
 
-  const publishedEvents = useMemo(() => submissions
-    .filter((item) => item.status === 'published')
-    .map(submissionToEvent), [submissions]);
+  const publishedEvents = useMemo(() => {
+    if (currentBackendMode && publicEvents.length > 0) return publicEvents;
+    return submissions
+      .filter((item) => item.status === 'published')
+      .map(submissionToEvent);
+  }, [submissions, publicEvents, currentBackendMode]);
 
   return {
     submissions,

@@ -1,11 +1,6 @@
 -- Supabase migration: event_submissions table
 -- Run this in the Supabase SQL Editor (Dashboard → SQL Editor → New query)
 --
--- NOTE: The "end" column must be double-quoted in migrations pushed via CLI
--- because `end` is a PL/pgSQL reserved keyword. When running in the SQL
--- Editor directly, PostgreSQL accepts it unquoted, but `supabase db push`
--- wraps statements in a DO block where `end` must be quoted.
---
 -- DEMO ONLY / DO NOT DEPLOY PUBLICLY AS-IS:
 -- The RLS policies below intentionally allow anonymous read/write/delete so the
 -- prototype can be tested without auth. Before any public production launch,
@@ -21,7 +16,7 @@ CREATE TABLE IF NOT EXISTS event_submissions (
   neigh               TEXT DEFAULT '',
   day                 TEXT DEFAULT '',
   start               TEXT DEFAULT '',
-  end                 TEXT DEFAULT '',
+  "end"               TEXT DEFAULT '',
   format              TEXT DEFAULT '',
   access              TEXT DEFAULT '',
   capacity            INTEGER DEFAULT 60,

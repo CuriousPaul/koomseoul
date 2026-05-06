@@ -132,6 +132,22 @@ SELECT policyname FROM pg_policies WHERE tablename = 'event_submissions';
 1. ~~**Add Supabase Auth**~~ — ✅ See `docs/supabase-auth-rls.sql` and the Production Auth/RLS Hardening section above.
 2. **Normalize audit history** — Move `history` to a separate `submission_audit_log` table with proper foreign keys.
 3. **Add real-time subscriptions** — Use `supabase.channel()` to push changes to all connected admin sessions.
-4. **Point public reads to `public_published_events`** — The production SQL adds a safe projection view. Update the frontend/API to read that view before launch so contact emails and audit history are never exposed.
+4. ~~**Point public reads to `public_published_events`**~~ — ✅ Implemented in `src/submissionService.js` (`loadPublishedEvents()`) and wired into `src/submissionStore.js`. When Supabase is available, published events are read from the safe `public_published_events` view (no contact_email/history). Admin queue continues to read `event_submissions` for full visibility.
 5. **Add rate limiting** — Prevent spam submissions at the API gateway or RLS level.
 6. **Add soft delete** — Demo reset is local-only in the app and seed-scoped in the service. Add `deleted_at` column before any production delete workflow.
+
+## Supabase Project Setup (Completed)
+
+- **Project name**: koom-seoul
+- **Region**: Northeast Asia (Seoul) — `ap-northeast-2`
+- **Project ref**: `hzuoeiorcntdntdbvkgl`
+- **Dashboard**: https://supabase.com/dashboard/project/hzuoeiorcntdntdbvkgl
+- **Migrations applied**:
+  - `20260506050000_event_submissions_schema.sql` — creates table + demo RLS
+  - `20260506050100_auth_rls_hardening.sql` — replaces demo policies with production RLS, creates `public_published_events` view
+- **Vercel env vars**: `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` set for production/preview/development
+- **Local env**: `.env.local` created (gitignored)
+- **Remaining manual step**: Create an admin user in Supabase Dashboard → Authentication → Users, then run:
+  ```sql
+  INSERT INTO user_roles (user_id, role) VALUES ('the-admin-user-uuid', 'admin');
+  ```
