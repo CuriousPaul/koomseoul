@@ -84,6 +84,42 @@ function submissionToRow(s, overrides = {}) {
   };
 }
 
+function partialUpdateToRow(updates) {
+  const row = {};
+  const map = {
+    id: 'id',
+    title: 'title',
+    host: 'host',
+    contactEmail: 'contact_email',
+    track: 'track',
+    neigh: 'neigh',
+    day: 'day',
+    start: 'start',
+    end: 'end',
+    format: 'format',
+    access: 'access',
+    capacity: 'capacity',
+    submittedAt: 'submitted_at',
+    status: 'status',
+    blurb: 'blurb',
+    location: 'location',
+    audience: 'audience',
+    speakers: 'speakers',
+    source: 'source',
+    publishedEventId: 'published_event_id',
+    createdAt: 'created_at',
+    updatedAt: 'updated_at',
+    history: 'history',
+    flag: 'flag',
+  };
+  Object.entries(map).forEach(([domainKey, rowKey]) => {
+    if (Object.prototype.hasOwnProperty.call(updates, domainKey)) {
+      row[rowKey] = domainKey === 'status' ? normalizeStatus(updates[domainKey]) : updates[domainKey];
+    }
+  });
+  return row;
+}
+
 const STORAGE_KEY = 'koomSeoul.eventSubmissions.v1';
 
 const seedSubmissions = () => PENDING_SUBMISSIONS.map((item) => ({
@@ -103,7 +139,7 @@ const seedSubmissions = () => PENDING_SUBMISSIONS.map((item) => ({
   ],
 }));
 
-function localRead() {
+export function loadLocalSubmissions() {
   if (typeof window === 'undefined') return seedSubmissions();
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
@@ -143,7 +179,7 @@ export async function loadSubmissions() {
       console.warn('[submissionService] Supabase load failed, using localStorage:', err.message);
     }
   }
-  return localRead();
+  return loadLocalSubmissions();
 }
 
 export async function createSubmissionRemote(submission) {
@@ -165,7 +201,7 @@ export async function updateSubmissionRemote(id, updates) {
   const sb = getSupabase();
   if (sb) {
     try {
-      const rowUpdates = submissionToRow(updates);
+      const rowUpdates = partialUpdateToRow(updates);
       Object.keys(rowUpdates).forEach((k) => {
         if (rowUpdates[k] === undefined) delete rowUpdates[k];
       });
@@ -184,7 +220,7 @@ export async function syncSubmissions(submissions) {
   const sb = getSupabase();
   if (sb) {
     try {
-      await sb.from(TABLE).delete().neq('id', '__never__');
+      await sb.from(TABLE).delete().eq('source', 'seed');
       if (submissions.length > 0) {
         await sb.from(TABLE).insert(submissions.map((s) => submissionToRow(s)));
       }

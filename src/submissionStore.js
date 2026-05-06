@@ -7,6 +7,7 @@ import {
   updateSubmissionRemote,
   syncSubmissions,
   persistLocal,
+  loadLocalSubmissions,
 } from './submissionService.js';
 
 const nowIso = () => new Date().toISOString();
@@ -61,8 +62,10 @@ const buildPublishedEventId = (submissionId, reservedIds) => {
 export const getReservedEventIds = (events = []) => new Set(events.map((event) => event.id));
 
 export function useSubmissionWorkflow(reservedEventIds = new Set()) {
-  const [submissions, setSubmissions] = useState(() => seedSubmissions());
+  const [submissions, setSubmissions] = useState(() => loadLocalSubmissions());
   const [backendMode, setBackendMode] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+  const currentBackendMode = isBackendAvailable();
 
   useEffect(() => {
     let cancelled = false;
@@ -70,14 +73,15 @@ export function useSubmissionWorkflow(reservedEventIds = new Set()) {
       if (!cancelled) {
         setSubmissions(loaded);
         setBackendMode(isBackendAvailable());
+        setHydrated(true);
       }
     });
     return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
-    if (!backendMode) persistLocal(submissions);
-  }, [submissions, backendMode]);
+    if (hydrated && !currentBackendMode) persistLocal(submissions);
+  }, [submissions, currentBackendMode, hydrated]);
 
   const createSubmission = useCallback((form) => {
     const at = nowIso();
@@ -114,13 +118,15 @@ export function useSubmissionWorkflow(reservedEventIds = new Set()) {
     setSubmissions(apply);
 
     if (backendMode) {
-      const at = nowIso();
-      const audited = { status, updatedAt: at, history: [{ action: status, note: note || statusLabels[status] || status, at, actor: 'UKF Ops' }] };
-      updateSubmissionRemote(id, audited).then((remote) => {
-        if (remote) loadFromService().then(setSubmissions);
-      });
+      const current = submissions.find((item) => item.id === id);
+      if (current) {
+        const audited = addAudit({ ...current, status }, status, note || statusLabels[status] || status);
+        updateSubmissionRemote(id, audited).then((remote) => {
+          if (remote) loadFromService().then(setSubmissions);
+        });
+      }
     }
-  }, [backendMode]);
+  }, [backendMode, submissions]);
 
   const publishSubmission = useCallback((id) => {
     const apply = (prev) => {
@@ -143,7 +149,7 @@ export function useSubmissionWorkflow(reservedEventIds = new Set()) {
     if (backendMode) {
       setSubmissions((current) => {
         const item = current.find((s) => s.id === id);
-        if (item) {
+        if (item && item.status === 'approved') {
           const reservedIds = new Set(reservedEventIds);
           current.forEach((s) => { if (s.publishedEventId) reservedIds.add(s.publishedEventId); });
           const publishedEventId = item.publishedEventId || buildPublishedEventId(item.id, reservedIds);
@@ -163,9 +169,11 @@ export function useSubmissionWorkflow(reservedEventIds = new Set()) {
   }, [backendMode, reservedEventIds]);
 
   const resetDemoData = useCallback(() => {
-    const seeds = seedSubmissions();
-    setSubmissions(seeds);
-    if (backendMode) syncSubmissions(seeds);
+    if (backendMode) {
+      console.warn('[submissionStore] Reset demo queue is disabled while Supabase is connected.');
+      return;
+    }
+    setSubmissions(seedSubmissions());
   }, [backendMode]);
 
   const publishedEvents = useMemo(() => submissions
