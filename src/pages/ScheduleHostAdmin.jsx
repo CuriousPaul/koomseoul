@@ -347,7 +347,7 @@ export function HostPage({ createSubmission, onNav }) {
       )}
 
       <div className="kw-form-foot">
-        <p className="note">This frontend prototype persists submissions in your browser localStorage so UKF can test the operating workflow before adding auth and a database.</p>
+        <p className="note">Supabase can power the shared review queue when configured; otherwise this prototype falls back to browser localStorage.</p>
         <div style={{display:"flex", gap:12, flexWrap:"wrap"}}>
           {step > 0 && <button className="kw-btn kw-btn-ghost" onClick={() => setStep(step - 1)}>← Back</button>}
           {step < 2 ? (
@@ -412,7 +412,7 @@ export function AdminPage({ workflow }) {
           <div className="row"><span>New submissions</span><span className="v">{counts.submitted}</span></div>
           <div className="row"><span>Needs changes</span><span className="v">{counts.needs_changes}</span></div>
           <div className="row"><span>Published</span><span className="v">{counts.published}</span></div>
-          <div className="row"><span>Prototype store</span><span className="v">local</span></div>
+          <div className="row"><span>Prototype store</span><span className="v">{workflow.backendMode ? 'Supabase' : 'local'}</span></div>
         </div>
       </aside>
 
@@ -421,7 +421,7 @@ export function AdminPage({ workflow }) {
           <div>
             <div className="kw-eyebrow"><span className="dot"></span>SUBMISSION QUEUE</div>
             <h1>Review &amp; publish.</h1>
-            <p className="sub">Host submissions are persisted in browser localStorage for this ops workflow prototype.</p>
+            <p className="sub">Host submissions use Supabase when configured, with localStorage fallback for prototype/offline mode.</p>
           </div>
           <div className="kw-admin-tabs">
             {queueTabs.map(t => (
@@ -433,7 +433,9 @@ export function AdminPage({ workflow }) {
         </div>
 
         <div className="kw-admin-prototype-note">
-          <strong>Prototype limitation:</strong> this queue uses localStorage, not shared auth or a server database. It is ready for workflow QA, not multi-user operations.
+          <strong>Prototype note:</strong> {workflow.backendMode
+            ? 'Connected to Supabase backend. Data persists across devices and sessions.'
+            : 'Using localStorage — data stays in this browser only. Connect Supabase for shared persistence.'}
           <button className="kw-btn kw-btn-tertiary kw-btn-sm" onClick={workflow.resetDemoData}>Reset demo queue</button>
         </div>
 
