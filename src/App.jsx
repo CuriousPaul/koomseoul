@@ -4,7 +4,9 @@ import { KwHeader, KwFooter } from './shared.jsx';
 import { TweaksPanel, TweakSection, useTweaks } from './TweaksPanel.jsx';
 import HomePage from './pages/HomePage.jsx';
 import DiscoverPage from './pages/DiscoverPage.jsx';
+import { EVENTS } from './data.js';
 import { SchedulePage, HostPage, AdminPage } from './pages/ScheduleHostAdmin.jsx';
+import { getReservedEventIds, useSubmissionWorkflow } from './submissionStore.js';
 
 const TWEAK_DEFAULTS = { accent: "heritage_red" };
 
@@ -22,6 +24,8 @@ export default function App() {
   const [pageProps, setPageProps] = useState(null);
   const [lang, setLang] = useState("en");
   const [scheduleIds, setScheduleIds] = useState(["e01", "e08", "e13"]);
+  const workflow = useSubmissionWorkflow(getReservedEventIds(EVENTS));
+  const allEvents = [...workflow.publishedEvents, ...EVENTS];
   const [tweaks, setTweak] = useTweaks(TWEAK_DEFAULTS);
 
   useEffect(() => {
@@ -48,14 +52,16 @@ export default function App() {
 
       {page === "home"     && <HomePage lang={lang} onNav={onNav} />}
       {page === "discover" && <DiscoverPage lang={lang}
+                                            events={allEvents}
                                             scheduleIds={scheduleIds}
                                             toggleSchedule={toggleSchedule}
                                             prefilters={pageProps} />}
-      {page === "schedule" && <SchedulePage scheduleIds={scheduleIds}
+      {page === "schedule" && <SchedulePage events={allEvents}
+                                            scheduleIds={scheduleIds}
                                             toggleSchedule={toggleSchedule}
                                             onNav={onNav} />}
-      {page === "host"     && <HostPage />}
-      {page === "admin"    && <AdminPage />}
+      {page === "host"     && <HostPage createSubmission={workflow.createSubmission} onNav={onNav} />}
+      {page === "admin"    && <AdminPage workflow={workflow} />}
 
       {(page === "home" || page === "host") && <KwFooter />}
 
