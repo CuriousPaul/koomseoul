@@ -1,7 +1,13 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { PENDING_SUBMISSIONS } from './data.js';
-
-const STORAGE_KEY = 'koomSeoul.eventSubmissions.v1';
+import {
+  isBackendAvailable,
+  loadSubmissions as loadFromService,
+  createSubmissionRemote,
+  updateSubmissionRemote,
+  syncSubmissions,
+  persistLocal,
+} from './submissionService.js';
 
 const nowIso = () => new Date().toISOString();
 
@@ -14,11 +20,6 @@ const statusLabels = {
 };
 
 export const SUBMISSION_STATUSES = statusLabels;
-
-const normalizeLegacyStatus = (status) => {
-  if (status === 'pending') return 'submitted';
-  return status || 'submitted';
-};
 
 const addAudit = (submission, action, note) => {
   const at = nowIso();
@@ -34,46 +35,20 @@ const addAudit = (submission, action, note) => {
 
 const seedSubmissions = () => PENDING_SUBMISSIONS.map((item) => ({
   ...item,
-  status: normalizeLegacyStatus(item.status),
+  status: item.status === 'pending' ? 'submitted' : (item.status || 'submitted'),
   createdAt: `${item.submittedAt}T09:00:00.000Z`,
   updatedAt: `${item.submittedAt}T09:00:00.000Z`,
   submittedAt: item.submittedAt,
   source: 'seed',
   history: [
     {
-      action: normalizeLegacyStatus(item.status) === 'rejected' ? 'rejected' : 'submitted',
+      action: (item.status === 'pending' ? 'submitted' : item.status || 'submitted') === 'rejected' ? 'rejected' : 'submitted',
       note: item.flag || 'Seeded demo submission',
       at: `${item.submittedAt}T09:00:00.000Z`,
       actor: 'UKF Ops',
     },
   ],
 }));
-
-const safeRead = () => {
-  if (typeof window === 'undefined') return seedSubmissions();
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return seedSubmissions();
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return seedSubmissions();
-    return parsed.map((item) => ({
-      ...item,
-      status: normalizeLegacyStatus(item.status),
-      history: Array.isArray(item.history) ? item.history : [],
-    }));
-  } catch {
-    return seedSubmissions();
-  }
-};
-
-const safeWrite = (submissions) => {
-  if (typeof window === 'undefined') return;
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(submissions));
-  } catch {
-    // localStorage can fail in private browsing. Keep the in-memory workflow usable.
-  }
-};
 
 const buildPublishedEventId = (submissionId, reservedIds) => {
   const baseId = `pub-${submissionId}`;
@@ -86,13 +61,25 @@ const buildPublishedEventId = (submissionId, reservedIds) => {
 export const getReservedEventIds = (events = []) => new Set(events.map((event) => event.id));
 
 export function useSubmissionWorkflow(reservedEventIds = new Set()) {
-  const [submissions, setSubmissions] = useState(() => safeRead());
+  const [submissions, setSubmissions] = useState(() => seedSubmissions());
+  const [backendMode, setBackendMode] = useState(false);
 
   useEffect(() => {
-    safeWrite(submissions);
-  }, [submissions]);
+    let cancelled = false;
+    loadFromService().then((loaded) => {
+      if (!cancelled) {
+        setSubmissions(loaded);
+        setBackendMode(isBackendAvailable());
+      }
+    });
+    return () => { cancelled = true; };
+  }, []);
 
-  const createSubmission = (form) => {
+  useEffect(() => {
+    if (!backendMode) persistLocal(submissions);
+  }, [submissions, backendMode]);
+
+  const createSubmission = useCallback((form) => {
     const at = nowIso();
     const id = `s${Date.now().toString(36)}`;
     const submission = {
@@ -107,36 +94,79 @@ export function useSubmissionWorkflow(reservedEventIds = new Set()) {
         { action: 'submitted', note: 'Host submitted event proposal', at, actor: form.host || 'Host' },
       ],
     };
+
+    if (backendMode) {
+      createSubmissionRemote(submission).then(() => {
+        loadFromService().then(setSubmissions);
+      });
+    }
+
     setSubmissions((prev) => [submission, ...prev]);
     return submission;
-  };
+  }, [backendMode]);
 
-  const updateStatus = (id, status, note = '') => {
-    setSubmissions((prev) => prev.map((item) => {
+  const updateStatus = useCallback((id, status, note = '') => {
+    const apply = (prev) => prev.map((item) => {
       if (item.id !== id) return item;
       return addAudit({ ...item, status }, status, note || statusLabels[status] || status);
-    }));
-  };
+    });
 
-  const publishSubmission = (id) => {
-    setSubmissions((prev) => {
+    setSubmissions(apply);
+
+    if (backendMode) {
+      const at = nowIso();
+      const audited = { status, updatedAt: at, history: [{ action: status, note: note || statusLabels[status] || status, at, actor: 'UKF Ops' }] };
+      updateSubmissionRemote(id, audited).then((remote) => {
+        if (remote) loadFromService().then(setSubmissions);
+      });
+    }
+  }, [backendMode]);
+
+  const publishSubmission = useCallback((id) => {
+    const apply = (prev) => {
       const reservedIds = new Set(reservedEventIds);
       prev.forEach((submission) => {
         if (submission.id !== id && submission.publishedEventId) {
           reservedIds.add(submission.publishedEventId);
         }
       });
-
       return prev.map((item) => {
         if (item.id !== id) return item;
         if (item.status !== 'approved') return item;
         const publishedEventId = item.publishedEventId || buildPublishedEventId(item.id, reservedIds);
         return addAudit({ ...item, status: 'published', publishedEventId }, 'published', 'Published to public directory');
       });
-    });
-  };
+    };
 
-  const resetDemoData = () => setSubmissions(seedSubmissions());
+    setSubmissions(apply);
+
+    if (backendMode) {
+      setSubmissions((current) => {
+        const item = current.find((s) => s.id === id);
+        if (item) {
+          const reservedIds = new Set(reservedEventIds);
+          current.forEach((s) => { if (s.publishedEventId) reservedIds.add(s.publishedEventId); });
+          const publishedEventId = item.publishedEventId || buildPublishedEventId(item.id, reservedIds);
+          const at = nowIso();
+          updateSubmissionRemote(id, {
+            status: 'published',
+            publishedEventId,
+            updatedAt: at,
+            history: [...(item.history || []), { action: 'published', note: 'Published to public directory', at, actor: 'UKF Ops' }],
+          }).then((remote) => {
+            if (remote) loadFromService().then(setSubmissions);
+          });
+        }
+        return current;
+      });
+    }
+  }, [backendMode, reservedEventIds]);
+
+  const resetDemoData = useCallback(() => {
+    const seeds = seedSubmissions();
+    setSubmissions(seeds);
+    if (backendMode) syncSubmissions(seeds);
+  }, [backendMode]);
 
   const publishedEvents = useMemo(() => submissions
     .filter((item) => item.status === 'published')
@@ -149,6 +179,7 @@ export function useSubmissionWorkflow(reservedEventIds = new Set()) {
     updateStatus,
     publishSubmission,
     resetDemoData,
+    backendMode,
   };
 }
 

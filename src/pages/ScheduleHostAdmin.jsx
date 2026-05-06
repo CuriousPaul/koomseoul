@@ -412,7 +412,7 @@ export function AdminPage({ workflow }) {
           <div className="row"><span>New submissions</span><span className="v">{counts.submitted}</span></div>
           <div className="row"><span>Needs changes</span><span className="v">{counts.needs_changes}</span></div>
           <div className="row"><span>Published</span><span className="v">{counts.published}</span></div>
-          <div className="row"><span>Prototype store</span><span className="v">local</span></div>
+          <div className="row"><span>Prototype store</span><span className="v">{workflow.backendMode ? 'Supabase' : 'local'}</span></div>
         </div>
       </aside>
 
@@ -433,7 +433,9 @@ export function AdminPage({ workflow }) {
         </div>
 
         <div className="kw-admin-prototype-note">
-          <strong>Prototype limitation:</strong> this queue uses localStorage, not shared auth or a server database. It is ready for workflow QA, not multi-user operations.
+          <strong>Prototype note:</strong> {workflow.backendMode
+            ? 'Connected to Supabase backend. Data persists across devices and sessions.'
+            : 'Using localStorage — data stays in this browser only. Connect Supabase for shared persistence.'}
           <button className="kw-btn kw-btn-tertiary kw-btn-sm" onClick={workflow.resetDemoData}>Reset demo queue</button>
         </div>
 

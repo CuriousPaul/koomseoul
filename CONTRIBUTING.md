@@ -21,6 +21,8 @@ npm audit --audit-level=moderate
 - `src/data.js` — static event and sponsor data
 - `src/shared.jsx` — shared header/footer/UI bits
 - `src/styles.css` / `src/tokens.css` — styling
+- `src/submissionService.js` — repository layer (Supabase or localStorage)
+- `src/submissionStore.js` — React hook for submission workflow state
 
 ## Workflow
 
@@ -37,9 +39,21 @@ npm audit --audit-level=moderate
 
 ## Current prototype limits
 
-- This is a static frontend prototype.
-- RSVP, Host, and Admin flows use local React state and in-memory data only.
-- No backend, auth, persistence, or real API integrations are present.
+- Host and Admin flows use Supabase when configured (see below), otherwise localStorage.
+- No authentication or role-based access is implemented yet.
+- No real-time sync between sessions.
+
+## Supabase backend (optional)
+
+The submission workflow can persist to Supabase instead of localStorage.
+
+1. Create a Supabase project at [supabase.com](https://supabase.com).
+2. Run `docs/supabase-schema.sql` in the Supabase SQL Editor.
+3. Create `.env.local` with `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
+4. For Vercel, set the same variables in Project Settings → Environment Variables.
+5. See `docs/backend-workflow-notes.md` for full details and limitations.
+
+When Supabase is not configured, the app falls back to localStorage and all features work unchanged.
 
 ## Mobile QA
 
