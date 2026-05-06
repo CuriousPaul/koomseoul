@@ -21,8 +21,10 @@ npm audit --audit-level=moderate
 - `src/data.js` — static event and sponsor data
 - `src/shared.jsx` — shared header/footer/UI bits
 - `src/styles.css` / `src/tokens.css` — styling
-- `src/submissionService.js` — repository layer (Supabase or localStorage)
+ - `src/submissionService.js` — repository layer (Supabase or localStorage)
 - `src/submissionStore.js` — React hook for submission workflow state
+- `src/lib/emailService.js` — client-side email service (Resend via Vercel serverless function)
+- `api/send-email.js` — Vercel serverless function for transactional email
 
 ## Workflow
 
@@ -56,6 +58,21 @@ The submission workflow can persist to Supabase instead of localStorage.
 6. See `docs/backend-workflow-notes.md` for full details and limitations.
 
 When Supabase is not configured, the app falls back to localStorage and all features work unchanged.
+
+## Email service (Resend)
+
+Transaction emails (verification, welcome, submission confirmation) go through Resend via a Vercel serverless function. The API key never reaches the client bundle.
+
+1. Sign up at [resend.com](https://resend.com) and create an API key with **Send** permission.
+2. Add to `.env.local` (or Vercel env vars):
+   ```
+   RESEND_API_KEY=re_your_key
+   RESEND_FROM_EMAIL=Koom Week Seoul <hello@koomseoul.com>
+   ```
+3. For local dev with the email endpoint, run `vercel dev` instead of `vite dev`.
+4. See `docs/email-integration.md` for trigger points, email types, and auth wiring guide.
+
+When Resend is not configured, email calls fail gracefully — the app continues to work.
 
 ## Mobile QA
 
