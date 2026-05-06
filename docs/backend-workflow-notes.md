@@ -17,7 +17,7 @@ Go to [supabase.com](https://supabase.com), create a new project, and note your 
 
 ### 2. Run the SQL migration
 
-Execute the SQL in `docs/supabase-schema.sql` in the Supabase SQL Editor. This creates the `event_submissions` table with appropriate columns and RLS policies.
+Execute the SQL in `docs/supabase-schema.sql` in the Supabase SQL Editor. This creates the `event_submissions` table with demo-friendly RLS policies. **Do not use those policies for a public production launch without adding Supabase Auth and role-based admin restrictions.**
 
 ### 3. Set environment variables
 
@@ -63,7 +63,7 @@ Admin publish → publishSubmission() → submissionService → Supabase update 
 
 ## Current Limitations
 
-- **No authentication.** The anon key allows unrestricted read/write to `event_submissions`. RLS policies are defined but not enforced per-user since there is no auth layer yet.
+- **Demo-only security model.** The current SQL intentionally allows anonymous read/write/delete to `event_submissions` so the prototype can be tested without auth. **Never deploy this policy set publicly as-is.** Add Supabase Auth and role-based RLS before production use.
 - **No real-time sync.** Changes made by one user are not pushed to other open sessions. Each page load fetches fresh data from Supabase.
 - **Optimistic local updates.** The UI updates immediately in local state, then syncs to Supabase asynchronously. If the Supabase write fails, local state will be correct but remote will be stale.
 - **No file uploads.** The submission form does not support image or document attachments.
@@ -76,4 +76,4 @@ Admin publish → publishSubmission() → submissionService → Supabase update 
 3. **Add real-time subscriptions** — Use `supabase.channel()` to push changes to all connected admin sessions.
 4. **Add `published_events` table** — A separate table for the public event directory, populated by a trigger when a submission is published.
 5. **Add rate limiting** — Prevent spam submissions at the API gateway or RLS level.
-6. **Add soft delete** — Currently `syncSubmissions` does a hard delete. Add `deleted_at` column for auditability.
+6. **Add soft delete** — Demo reset is local-only in the app and seed-scoped in the service. Add `deleted_at` column before any production delete workflow.

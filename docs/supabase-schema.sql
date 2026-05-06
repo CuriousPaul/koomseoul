@@ -1,5 +1,11 @@
 -- Supabase migration: event_submissions table
 -- Run this in the Supabase SQL Editor (Dashboard → SQL Editor → New query)
+--
+-- DEMO ONLY / DO NOT DEPLOY PUBLICLY AS-IS:
+-- The RLS policies below intentionally allow anonymous read/write/delete so the
+-- prototype can be tested without auth. Before any public production launch,
+-- replace them with authenticated role-based policies and remove anonymous
+-- update/delete access.
 
 CREATE TABLE IF NOT EXISTS event_submissions (
   id                  TEXT PRIMARY KEY,
@@ -39,32 +45,32 @@ CREATE INDEX IF NOT EXISTS idx_event_submissions_status
 -- Enable Row Level Security
 ALTER TABLE event_submissions ENABLE ROW LEVEL SECURITY;
 
--- RLS policy: allow anonymous reads (public directory needs this)
--- NOTE: In production, restrict reads to published-only and require auth for admin access
+-- DEMO-ONLY RLS policy: allow anonymous reads (public directory needs this)
+-- PRODUCTION TODO: restrict reads to published-only and require auth for admin access
 CREATE POLICY "Allow anonymous read access"
   ON event_submissions
   FOR SELECT
   TO anon, authenticated
   USING (true);
 
--- RLS policy: allow anonymous inserts (host form submissions)
--- NOTE: In production, add rate limiting and require at least anon auth
+-- DEMO-ONLY RLS policy: allow anonymous inserts (host form submissions)
+-- PRODUCTION TODO: add rate limiting and require at least anon auth
 CREATE POLICY "Allow anonymous insert"
   ON event_submissions
   FOR INSERT
   TO anon, authenticated
   WITH CHECK (true);
 
--- RLS policy: allow anonymous updates (admin status changes)
--- NOTE: In production, restrict to authenticated admin users only
+-- DEMO-ONLY RLS policy: allow anonymous updates (admin status changes)
+-- PRODUCTION TODO: restrict to authenticated admin users only
 CREATE POLICY "Allow anonymous update"
   ON event_submissions
   FOR UPDATE
   TO anon, authenticated
   USING (true);
 
--- RLS policy: allow anonymous deletes (used by syncSubmissions reset)
--- NOTE: In production, restrict to authenticated admin users only
+-- DEMO-ONLY RLS policy: allow anonymous deletes (seed reset only)
+-- PRODUCTION TODO: remove anonymous delete access entirely
 CREATE POLICY "Allow anonymous delete"
   ON event_submissions
   FOR DELETE
