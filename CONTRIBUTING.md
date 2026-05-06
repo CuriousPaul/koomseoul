@@ -40,6 +40,7 @@ npm audit --audit-level=moderate
 ## Current prototype limits
 
 - Host and Admin flows use Supabase when configured (see below), otherwise localStorage.
+- **⚠️ Demo RLS policies are NOT safe for public deployment.** The default `docs/supabase-schema.sql` allows anonymous update/delete. Before any public launch, apply `docs/supabase-auth-rls.sql` and follow the production checklist in `docs/supabase-production-checklist.md`.
 - No authentication or role-based access is implemented yet.
 - No real-time sync between sessions.
 
@@ -49,9 +50,10 @@ The submission workflow can persist to Supabase instead of localStorage.
 
 1. Create a Supabase project at [supabase.com](https://supabase.com).
 2. Run `docs/supabase-schema.sql` in the Supabase SQL Editor.
-3. Create `.env.local` with `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
-4. For Vercel, set the same variables in Project Settings → Environment Variables.
-5. See `docs/backend-workflow-notes.md` for full details and limitations.
+3. **For production:** also run `docs/supabase-auth-rls.sql` to replace demo policies with safe role-based access control. See `docs/supabase-production-checklist.md`.
+4. Create `.env.local` with `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
+5. For Vercel, set the same variables in Project Settings → Environment Variables.
+6. See `docs/backend-workflow-notes.md` for full details and limitations.
 
 When Supabase is not configured, the app falls back to localStorage and all features work unchanged.
 

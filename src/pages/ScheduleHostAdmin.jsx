@@ -432,11 +432,21 @@ export function AdminPage({ workflow }) {
           </div>
         </div>
 
+        {workflow.backendMode && (
+          <div className="kw-admin-security-warning" role="alert">
+            <strong>⚠ Security warning:</strong> Supabase is connected with demo-only RLS policies.
+            Anyone with the project URL can read, update, or delete all submissions.
+            Apply <code>docs/supabase-auth-rls.sql</code> and set up admin authentication before any public launch.
+            See <code>docs/supabase-production-checklist.md</code> for steps.
+          </div>
+        )}
         <div className="kw-admin-prototype-note">
           <strong>Prototype note:</strong> {workflow.backendMode
             ? 'Connected to Supabase backend. Data persists across devices and sessions.'
             : 'Using localStorage — data stays in this browser only. Connect Supabase for shared persistence.'}
-          <button className="kw-btn kw-btn-tertiary kw-btn-sm" onClick={workflow.resetDemoData}>Reset demo queue</button>
+          {!workflow.backendMode && (
+            <button className="kw-btn kw-btn-tertiary kw-btn-sm" onClick={workflow.resetDemoData}>Reset demo queue</button>
+          )}
         </div>
 
         {filtered.map(item => (
