@@ -1,10 +1,10 @@
 import { useState, useMemo } from 'react';
 import {
-  TRACKS, NEIGHBORHOODS, NEIGHBORHOOD_COORDS, ACCESS, DAYS, EVENTS
+  TRACKS, NEIGHBORHOODS, NEIGHBORHOOD_COORDS, ACCESS, DAYS, EVENTS as STATIC_EVENTS
 } from '../data.js';
 import { KwTrackTag } from '../shared.jsx';
 
-export default function DiscoverPage({ lang, scheduleIds, toggleSchedule, prefilters }) {
+export default function DiscoverPage({ lang, events = STATIC_EVENTS, scheduleIds, toggleSchedule, prefilters }) {
   const [selectedTracks, setSelectedTracks] = useState(prefilters?.track ? [prefilters.track] : []);
   const [selectedNeighs, setSelectedNeighs] = useState([]);
   const [selectedAccess, setSelectedAccess] = useState([]);
@@ -16,17 +16,17 @@ export default function DiscoverPage({ lang, scheduleIds, toggleSchedule, prefil
     setArr(arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v]);
 
   const filtered = useMemo(() => {
-    return EVENTS.filter(e => {
+    return events.filter(e => {
       if (selectedTracks.length && !selectedTracks.includes(e.track)) return false;
       if (selectedNeighs.length && !selectedNeighs.includes(e.neigh)) return false;
       if (selectedAccess.length && !selectedAccess.includes(e.access)) return false;
       if (selectedDay !== "all" && e.day !== selectedDay) return false;
       return true;
     });
-  }, [selectedTracks, selectedNeighs, selectedAccess, selectedDay]);
+  }, [events, selectedTracks, selectedNeighs, selectedAccess, selectedDay]);
 
-  const trackCounts = Object.keys(TRACKS).map(t => ({ t, n: EVENTS.filter(e => e.track === t).length }));
-  const neighCounts = Object.keys(NEIGHBORHOODS).map(n => ({ n, c: EVENTS.filter(e => e.neigh === n).length }));
+  const trackCounts = Object.keys(TRACKS).map(t => ({ t, n: events.filter(e => e.track === t).length }));
+  const neighCounts = Object.keys(NEIGHBORHOODS).map(n => ({ n, c: events.filter(e => e.neigh === n).length }));
   const neighEventCount = Object.keys(NEIGHBORHOODS).reduce((acc, n) => {
     acc[n] = filtered.filter(e => e.neigh === n).length;
     return acc;
@@ -37,7 +37,7 @@ export default function DiscoverPage({ lang, scheduleIds, toggleSchedule, prefil
   const isConflict = (ev) => {
     return scheduleIds.some(sid => {
       if (sid === ev.id) return false;
-      const s = EVENTS.find(e => e.id === sid);
+      const s = events.find(e => e.id === sid);
       if (!s || s.day !== ev.day) return false;
       return !(ev.end <= s.start || ev.start >= s.end);
     });
@@ -54,7 +54,7 @@ export default function DiscoverPage({ lang, scheduleIds, toggleSchedule, prefil
             <span className="label-wrap">
               <span className="checkbox" style={{borderRadius:"50%"}}></span>All days
             </span>
-            <span className="count">{EVENTS.length}</span>
+            <span className="count">{events.length}</span>
           </div>
           {DAYS.map(d => (
             <div key={d.id}
@@ -63,7 +63,7 @@ export default function DiscoverPage({ lang, scheduleIds, toggleSchedule, prefil
               <span className="label-wrap">
                 <span className="checkbox" style={{borderRadius:"50%"}}></span>{d.date} · {d.weekday}
               </span>
-              <span className="count">{EVENTS.filter(e => e.day === d.id).length}</span>
+              <span className="count">{events.filter(e => e.day === d.id).length}</span>
             </div>
           ))}
         </div>
@@ -105,7 +105,7 @@ export default function DiscoverPage({ lang, scheduleIds, toggleSchedule, prefil
               <span className="label-wrap">
                 <span className="checkbox"></span>{a.label}
               </span>
-              <span className="count">{EVENTS.filter(e => e.access === a.id).length}</span>
+              <span className="count">{events.filter(e => e.access === a.id).length}</span>
             </div>
           ))}
         </div>
@@ -158,7 +158,7 @@ export default function DiscoverPage({ lang, scheduleIds, toggleSchedule, prefil
             ))}
           </div>
         )) : (
-          filtered.sort((a, b) => a.start.localeCompare(b.start)).map(e => (
+          [...filtered].sort((a, b) => a.start.localeCompare(b.start)).map(e => (
             <EventRow key={e.id} ev={e}
                       active={activeEvent?.id === e.id}
                       inSchedule={scheduleIds.includes(e.id)}

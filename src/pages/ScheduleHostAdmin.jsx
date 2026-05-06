@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import {
-  EVENTS, DAYS, NEIGHBORHOODS, TRACKS, ACCESS, FORMATS, PENDING_SUBMISSIONS
+  EVENTS as STATIC_EVENTS, DAYS, NEIGHBORHOODS, TRACKS, ACCESS, FORMATS
 } from '../data.js';
 import { KwTrackTag } from '../shared.jsx';
+import { SUBMISSION_STATUSES } from '../submissionStore.js';
 
 // ---------------- SCHEDULE BUILDER ----------------
-export function SchedulePage({ scheduleIds, toggleSchedule, onNav }) {
-  const myEvents = EVENTS.filter(e => scheduleIds.includes(e.id));
+export function SchedulePage({ events = STATIC_EVENTS, scheduleIds, toggleSchedule, onNav }) {
+  const myEvents = events.filter(e => scheduleIds.includes(e.id));
   const byDay = DAYS.map(d => ({
     ...d,
     events: myEvents.filter(e => e.day === d.id).sort((a, b) => a.start.localeCompare(b.start)),
@@ -134,25 +135,56 @@ function ScheduleEventRow({ ev, onRemove }) {
 }
 
 // ---------------- HOST SUBMISSION ----------------
-export function HostPage() {
-  const [step, setStep] = useState(0);
-  const [form, setForm] = useState({
-    title: "",
-    host: "",
-    track: "beauty",
-    format: "Panel",
-    day: "wed",
-    start: "14:00",
-    end: "16:00",
-    neigh: "seongsu",
-    capacity: 60,
-    access: "apply",
-    blurb: "",
-    audience: "",
-  });
-  const [submitted, setSubmitted] = useState(false);
+const INITIAL_HOST_FORM = {
+  title: "",
+  host: "",
+  contactEmail: "",
+  track: "beauty",
+  format: "Panel",
+  day: "wed",
+  start: "14:00",
+  end: "16:00",
+  neigh: "seongsu",
+  capacity: 60,
+  access: "apply",
+  blurb: "",
+  audience: "",
+  location: "",
+};
 
-  const upd = (k, v) => setForm({ ...form, [k]: v });
+function validateHostForm(form) {
+  const errors = {};
+  if (!form.title.trim()) errors.title = "Event title is required.";
+  if (!form.host.trim()) errors.host = "Host name is required.";
+  if (!form.contactEmail.trim()) errors.contactEmail = "Contact email is required for ops follow-up.";
+  if (form.contactEmail && !/^\S+@\S+\.\S+$/.test(form.contactEmail)) errors.contactEmail = "Use a valid email address.";
+  if (!form.blurb.trim()) errors.blurb = "Public blurb is required.";
+  if (form.blurb.length > 280) errors.blurb = "Keep the public blurb under 280 characters.";
+  if (!form.location.trim()) errors.location = "Venue or location note is required.";
+  if (!form.audience.trim()) errors.audience = "Target audience is required.";
+  if (Number(form.capacity) < 60) errors.capacity = "Capacity must be at least 60.";
+  if (form.end <= form.start) errors.end = "End time must be after start time.";
+  return errors;
+}
+
+export function HostPage({ createSubmission, onNav }) {
+  const [step, setStep] = useState(0);
+  const [form, setForm] = useState(INITIAL_HOST_FORM);
+  const [submitted, setSubmitted] = useState(null);
+  const [errors, setErrors] = useState({});
+
+  const upd = (k, v) => {
+    setForm({ ...form, [k]: v });
+    if (errors[k]) setErrors({ ...errors, [k]: undefined });
+  };
+
+  const submit = () => {
+    const nextErrors = validateHostForm(form);
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) return;
+    const submission = createSubmission({ ...form, capacity: Number(form.capacity) });
+    setSubmitted(submission);
+  };
 
   if (submitted) {
     return (
@@ -160,10 +192,16 @@ export function HostPage() {
         <div className="kw-form-success">
           <div className="check">✓</div>
           <h2>Submission received.</h2>
-          <p>The UKF programming team reviews submissions within 3 business days. You'll get an email at the address on your UKF profile when a decision is made. Approved events appear in the Discover directory and are amplified through the Koom Week newsletter.</p>
-          <div style={{marginTop:32, display:"flex", gap:12, justifyContent:"center"}}>
-            <button className="kw-btn kw-btn-ghost" onClick={() => { setSubmitted(false); setStep(0); }}>Submit another</button>
-            <button className="kw-btn kw-btn-primary">Back to Overview</button>
+          <p>Your proposal is now in the UKF operations review queue as <strong>{submitted.id}</strong>. Ops can request changes, approve, reject, or publish it from Admin.</p>
+          <div className="kw-submission-receipt">
+            <div><span>Status</span><strong>{SUBMISSION_STATUSES[submitted.status]}</strong></div>
+            <div><span>Submitted</span><strong>{submitted.submittedAt}</strong></div>
+            <div><span>Host</span><strong>{submitted.host}</strong></div>
+          </div>
+          <div style={{marginTop:32, display:"flex", gap:12, justifyContent:"center", flexWrap:"wrap"}}>
+            <button className="kw-btn kw-btn-ghost" onClick={() => { setSubmitted(null); setForm(INITIAL_HOST_FORM); setStep(0); }}>Submit another</button>
+            <button className="kw-btn kw-btn-primary" onClick={() => onNav("admin")}>Review in Admin →</button>
+            <button className="kw-btn kw-btn-tertiary" onClick={() => onNav("discover")}>Back to Discover</button>
           </div>
         </div>
       </div>
@@ -175,8 +213,15 @@ export function HostPage() {
       <div className="kw-form-head">
         <div className="kw-eyebrow"><span className="dot"></span>HOST AN EVENT · STEP {step + 1} OF 3</div>
         <h1>Submit your event for Koom Week.</h1>
-        <p className="sub">UKF curates every event in the official directory. Submissions are reviewed within 3 business days against our quality and audience-fit standards.</p>
+        <p className="sub">Submissions are saved locally in this prototype and routed into the Admin review queue for UKF ops demo review.</p>
       </div>
+
+      {Object.keys(errors).length > 0 && (
+        <div className="kw-form-alert" role="alert">
+          <strong>Before submitting:</strong>
+          <ul>{Object.values(errors).filter(Boolean).map(err => <li key={err}>{err}</li>)}</ul>
+        </div>
+      )}
 
       {step === 0 && (
         <div className="kw-form-section">
@@ -186,7 +231,7 @@ export function HostPage() {
               <label>Event title</label>
               <input value={form.title} onChange={(e) => upd("title", e.target.value)}
                      placeholder="e.g. Cloudglow Founders Breakfast" />
-              <span className="help">Title-case. Avoid jargon. Sentence-case sub-titles fine after a colon.</span>
+              {errors.title && <span className="help error">{errors.title}</span>}
             </div>
           </div>
           <div className="kw-form-row">
@@ -194,11 +239,26 @@ export function HostPage() {
               <label>Host (company / VC / brand)</label>
               <input value={form.host} onChange={(e) => upd("host", e.target.value)}
                      placeholder="e.g. Olive Young N Seongsu" />
+              {errors.host && <span className="help error">{errors.host}</span>}
             </div>
+            <div className="kw-field">
+              <label>Ops contact email</label>
+              <input type="email" value={form.contactEmail} onChange={(e) => upd("contactEmail", e.target.value)}
+                     placeholder="host@example.com" />
+              {errors.contactEmail && <span className="help error">{errors.contactEmail}</span>}
+            </div>
+          </div>
+          <div className="kw-form-row">
             <div className="kw-field">
               <label>Track</label>
               <select value={form.track} onChange={(e) => upd("track", e.target.value)}>
                 {Object.values(TRACKS).map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+              </select>
+            </div>
+            <div className="kw-field">
+              <label>Format</label>
+              <select value={form.format} onChange={(e) => upd("format", e.target.value)}>
+                {FORMATS.map(f => <option key={f}>{f}</option>)}
               </select>
             </div>
           </div>
@@ -207,7 +267,7 @@ export function HostPage() {
               <label>Public blurb</label>
               <textarea value={form.blurb} onChange={(e) => upd("blurb", e.target.value)}
                         placeholder="One short paragraph. What is it, who should come, why now?" />
-              <span className="help">Max 280 characters. This appears on the event card and in search results.</span>
+              <span className={`help ${errors.blurb ? "error" : ""}`}>{errors.blurb || `${form.blurb.length}/280 characters`}</span>
             </div>
           </div>
         </div>
@@ -230,6 +290,7 @@ export function HostPage() {
             <div className="kw-field">
               <label>End</label>
               <input type="time" value={form.end} onChange={(e) => upd("end", e.target.value)} />
+              {errors.end && <span className="help error">{errors.end}</span>}
             </div>
           </div>
           <div className="kw-form-row">
@@ -240,16 +301,10 @@ export function HostPage() {
               </select>
             </div>
             <div className="kw-field">
-              <label>Format</label>
-              <select value={form.format} onChange={(e) => upd("format", e.target.value)}>
-                {FORMATS.map(f => <option key={f}>{f}</option>)}
-              </select>
-            </div>
-          </div>
-          <div className="kw-form-row solo">
-            <div className="kw-field">
-              <label>Venue address (full)</label>
-              <input placeholder="e.g. 4F Salon, Olive Young N Seongsu, 4 Achasan-ro 11-gil" />
+              <label>Venue address / note</label>
+              <input value={form.location} onChange={(e) => upd("location", e.target.value)}
+                     placeholder="e.g. 4F Salon, Olive Young N Seongsu" />
+              {errors.location && <span className="help error">{errors.location}</span>}
             </div>
           </div>
         </div>
@@ -261,8 +316,8 @@ export function HostPage() {
           <div className="kw-form-row">
             <div className="kw-field">
               <label>Capacity</label>
-              <input type="number" value={form.capacity} onChange={(e) => upd("capacity", +e.target.value)} />
-              <span className="help">Minimum 60. We don't list events with under-capacity rooms.</span>
+              <input type="number" min="60" value={form.capacity} onChange={(e) => upd("capacity", +e.target.value)} />
+              <span className={`help ${errors.capacity ? "error" : ""}`}>{errors.capacity || "Minimum 60 for official directory listing."}</span>
             </div>
             <div className="kw-field">
               <label>Access type</label>
@@ -279,31 +334,26 @@ export function HostPage() {
             <div className="kw-field">
               <label>Target audience</label>
               <textarea value={form.audience} onChange={(e) => upd("audience", e.target.value)}
-                        placeholder="Who is the right room for this event? UKF uses this to match attendee profiles to your event." />
+                        placeholder="Who is the right room for this event?" />
+              {errors.audience && <span className="help error">{errors.audience}</span>}
             </div>
           </div>
-          <div className="kw-form-row solo">
-            <div className="kw-field">
-              <label>Anti-hoarding acknowledgment</label>
-              <div style={{display:"flex", gap:12, alignItems:"start", padding:"16px 18px", background:"var(--bg-sunken)", borderRadius:6}}>
-                <input type="checkbox" defaultChecked style={{marginTop:4}} />
-                <span style={{font:"400 14px/1.5 var(--font-en)"}}>
-                  I understand that attendees with overlapping RSVPs cannot be added to my event roster — UKF enforces "sector intentionality" to protect host show-up rates.
-                </span>
-              </div>
-            </div>
+          <div className="kw-review-preview">
+            <h4>Review preview</h4>
+            <p><strong>{form.title || "Untitled event"}</strong> by {form.host || "Host TBD"}</p>
+            <p>{DAYS.find(d => d.id === form.day)?.date} · {form.start}–{form.end} · {NEIGHBORHOODS[form.neigh]?.label}</p>
           </div>
         </div>
       )}
 
       <div className="kw-form-foot">
-        <p className="note">All submissions reviewed by the UKF programming team within 3 business days. Approval is subject to brand fit, audience match, and capacity standards.</p>
-        <div style={{display:"flex", gap:12}}>
+        <p className="note">This frontend prototype persists submissions in your browser localStorage so UKF can test the operating workflow before adding auth and a database.</p>
+        <div style={{display:"flex", gap:12, flexWrap:"wrap"}}>
           {step > 0 && <button className="kw-btn kw-btn-ghost" onClick={() => setStep(step - 1)}>← Back</button>}
           {step < 2 ? (
             <button className="kw-btn kw-btn-primary" onClick={() => setStep(step + 1)}>Continue →</button>
           ) : (
-            <button className="kw-btn kw-btn-accent" onClick={() => setSubmitted(true)}>Submit for review</button>
+            <button className="kw-btn kw-btn-accent" onClick={submit}>Submit for review</button>
           )}
         </div>
       </div>
@@ -312,21 +362,25 @@ export function HostPage() {
 }
 
 // ---------------- ADMIN MODERATION ----------------
-export function AdminPage() {
-  const [tab, setTab] = useState("pending");
-  const [items, setItems] = useState(PENDING_SUBMISSIONS);
+const queueTabs = [
+  { k: 'submitted', label: 'Submitted' },
+  { k: 'needs_changes', label: 'Needs changes' },
+  { k: 'approved', label: 'Approved' },
+  { k: 'published', label: 'Published' },
+  { k: 'rejected', label: 'Rejected' },
+  { k: 'all', label: 'All' },
+];
 
-  const counts = {
-    pending: items.filter(i => i.status === "pending").length,
-    approved: items.filter(i => i.status === "approved").length,
-    rejected: items.filter(i => i.status === "rejected").length,
-  };
+export function AdminPage({ workflow }) {
+  const [tab, setTab] = useState("submitted");
+  const items = workflow.submissions;
+
+  const counts = queueTabs.reduce((acc, t) => {
+    acc[t.k] = t.k === 'all' ? items.length : items.filter(i => i.status === t.k).length;
+    return acc;
+  }, {});
 
   const filtered = tab === "all" ? items : items.filter(i => i.status === tab);
-
-  const setStatus = (id, status) => {
-    setItems(items.map(i => i.id === id ? { ...i, status } : i));
-  };
 
   const tabStyle = (k) => ({
     padding: "8px 16px",
@@ -348,17 +402,17 @@ export function AdminPage() {
           <span>Submissions</span>
           <span className="count">{items.length}</span>
         </div>
-        <div className="nav-item"><span>Approved Events</span><span className="count">{EVENTS.length}</span></div>
+        <div className="nav-item"><span>Published Events</span><span className="count">{workflow.publishedEvents.length}</span></div>
         <div className="nav-item"><span>Hosts</span><span className="count">86</span></div>
         <div className="nav-item"><span>Attendees</span><span className="count">2,418</span></div>
         <div className="nav-item"><span>Sponsors</span><span className="count">12</span></div>
 
         <div className="kw-admin-stats">
           <h4>This week</h4>
-          <div className="row"><span>New submissions</span><span className="v">{counts.pending}</span></div>
-          <div className="row"><span>Approval rate</span><span className="v">82%</span></div>
-          <div className="row"><span>Avg review time</span><span className="v">36h</span></div>
-          <div className="row"><span>Events at capacity</span><span className="v">7</span></div>
+          <div className="row"><span>New submissions</span><span className="v">{counts.submitted}</span></div>
+          <div className="row"><span>Needs changes</span><span className="v">{counts.needs_changes}</span></div>
+          <div className="row"><span>Published</span><span className="v">{counts.published}</span></div>
+          <div className="row"><span>Prototype store</span><span className="v">local</span></div>
         </div>
       </aside>
 
@@ -366,71 +420,25 @@ export function AdminPage() {
         <div className="kw-admin-head">
           <div>
             <div className="kw-eyebrow"><span className="dot"></span>SUBMISSION QUEUE</div>
-            <h1>Review &amp; approve.</h1>
-            <p className="sub">Hosts submit through the public form; you decide what goes in the directory.</p>
+            <h1>Review &amp; publish.</h1>
+            <p className="sub">Host submissions are persisted in browser localStorage for this ops workflow prototype.</p>
           </div>
-          <div style={{display:"flex", gap:8}}>
-            {[
-              { k: "pending",  label: "Pending",  c: counts.pending },
-              { k: "approved", label: "Approved", c: counts.approved },
-              { k: "rejected", label: "Rejected", c: counts.rejected },
-              { k: "all",      label: "All",      c: items.length },
-            ].map(t => (
+          <div className="kw-admin-tabs">
+            {queueTabs.map(t => (
               <button key={t.k} onClick={() => setTab(t.k)} style={tabStyle(t.k)}>
-                {t.label} <span style={{opacity:0.6, marginLeft:4}}>{t.c}</span>
+                {t.label} <span style={{opacity:0.6, marginLeft:4}}>{counts[t.k]}</span>
               </button>
             ))}
           </div>
         </div>
 
+        <div className="kw-admin-prototype-note">
+          <strong>Prototype limitation:</strong> this queue uses localStorage, not shared auth or a server database. It is ready for workflow QA, not multi-user operations.
+          <button className="kw-btn kw-btn-tertiary kw-btn-sm" onClick={workflow.resetDemoData}>Reset demo queue</button>
+        </div>
+
         {filtered.map(item => (
-          <div key={item.id}
-               className={`kw-pending-card ${item.flag ? "flagged" : ""} ${item.status}`}>
-            <div>
-              <div className="meta-row">
-                <KwTrackTag track={item.track} />
-                <span className="kw-pill">{item.format}</span>
-                <span className="kw-pill">{ACCESS[item.access].label}</span>
-                {item.status === "pending"  && <span className="kw-pill" style={{background:"#FEF3CD", color:"#B97900"}}>● Pending review</span>}
-                {item.status === "approved" && <span className="kw-pill" style={{background:"#E1F0E4", color:"#2F7D3B"}}>✓ Approved</span>}
-                {item.status === "rejected" && <span className="kw-pill" style={{background:"#FBE8EC", color:"#A60D26"}}>✕ Rejected</span>}
-                <span style={{marginLeft:"auto", font:"500 12px/1 var(--font-en)", color:"var(--fg-2)"}}>
-                  Submitted {item.submittedAt}
-                </span>
-              </div>
-              <h3>{item.title}</h3>
-              <p className="host">{item.host}</p>
-              {item.flag && <div className="flag-msg">⚠ Auto-flag: {item.flag}</div>}
-              <p className="blurb">{item.blurb}</p>
-              <div className="grid">
-                <div><div className="lbl">Day · Time</div>
-                  {DAYS.find(d => d.id === item.day).date} · {item.start}–{item.end}</div>
-                <div><div className="lbl">Neighborhood</div>{NEIGHBORHOODS[item.neigh].label}</div>
-                <div><div className="lbl">Capacity</div>{item.capacity}</div>
-              </div>
-            </div>
-            <div className="actions">
-              {item.status === "pending" && (
-                <>
-                  <button className="kw-btn kw-btn-accent kw-btn-sm" onClick={() => setStatus(item.id, "approved")}>
-                    ✓ Approve
-                  </button>
-                  <button className="kw-btn kw-btn-ghost kw-btn-sm">Request changes</button>
-                  <button className="kw-btn kw-btn-tertiary kw-btn-sm" onClick={() => setStatus(item.id, "rejected")}
-                          style={{color:"var(--accent-deep)"}}>Reject</button>
-                </>
-              )}
-              {item.status === "approved" && (
-                <>
-                  <button className="kw-btn kw-btn-ghost kw-btn-sm">View on site →</button>
-                  <button className="kw-btn kw-btn-tertiary kw-btn-sm" onClick={() => setStatus(item.id, "pending")}>Unapprove</button>
-                </>
-              )}
-              {item.status === "rejected" && (
-                <button className="kw-btn kw-btn-ghost kw-btn-sm" onClick={() => setStatus(item.id, "pending")}>Reopen</button>
-              )}
-            </div>
-          </div>
+          <SubmissionCard key={item.id} item={item} workflow={workflow} />
         ))}
 
         {filtered.length === 0 && (
@@ -439,6 +447,78 @@ export function AdminPage() {
           </div>
         )}
       </main>
+    </div>
+  );
+}
+
+function SubmissionCard({ item, workflow }) {
+  const statusLabel = SUBMISSION_STATUSES[item.status] || item.status;
+  return (
+    <div className={`kw-pending-card ${item.flag ? "flagged" : ""} ${item.status}`}>
+      <div>
+        <div className="meta-row">
+          <KwTrackTag track={item.track} />
+          <span className="kw-pill">{item.format}</span>
+          <span className="kw-pill">{ACCESS[item.access].label}</span>
+          <span className={`kw-pill status-${item.status}`}>{statusLabel}</span>
+          <span style={{marginLeft:"auto", font:"500 12px/1 var(--font-en)", color:"var(--fg-2)"}}>
+            Submitted {item.submittedAt}
+          </span>
+        </div>
+        <h3>{item.title}</h3>
+        <p className="host">{item.host}</p>
+        {item.contactEmail && <p className="host">Ops contact: {item.contactEmail}</p>}
+        {item.flag && <div className="flag-msg">⚠ Auto-flag: {item.flag}</div>}
+        <p className="blurb">{item.blurb}</p>
+        <div className="grid">
+          <div><div className="lbl">Day · Time</div>
+            {DAYS.find(d => d.id === item.day)?.date} · {item.start}–{item.end}</div>
+          <div><div className="lbl">Neighborhood</div>{NEIGHBORHOODS[item.neigh]?.label}</div>
+          <div><div className="lbl">Capacity</div>{item.capacity}</div>
+        </div>
+        {item.audience && <p className="kw-admin-audience"><strong>Audience:</strong> {item.audience}</p>}
+        {item.location && <p className="kw-admin-audience"><strong>Venue:</strong> {item.location}</p>}
+        <details className="kw-audit-log">
+          <summary>Audit history ({item.history?.length || 0})</summary>
+          {(item.history || []).map((h, idx) => (
+            <div className="audit-row" key={`${h.at}-${idx}`}>
+              <span>{new Date(h.at).toLocaleString()}</span>
+              <strong>{h.action}</strong>
+              <em>{h.note}</em>
+            </div>
+          ))}
+        </details>
+      </div>
+      <div className="actions">
+        {item.status === "submitted" && (
+          <>
+            <button className="kw-btn kw-btn-accent kw-btn-sm" onClick={() => workflow.updateStatus(item.id, "approved", "Approved by UKF ops")}>✓ Approve</button>
+            <button className="kw-btn kw-btn-ghost kw-btn-sm" onClick={() => workflow.updateStatus(item.id, "needs_changes", "Needs host follow-up")}>Request changes</button>
+            <button className="kw-btn kw-btn-tertiary kw-btn-sm" onClick={() => workflow.updateStatus(item.id, "rejected", "Rejected by UKF ops")} style={{color:"var(--accent-deep)"}}>Reject</button>
+          </>
+        )}
+        {item.status === "needs_changes" && (
+          <>
+            <button className="kw-btn kw-btn-accent kw-btn-sm" onClick={() => workflow.updateStatus(item.id, "approved", "Changes accepted")}>Approve</button>
+            <button className="kw-btn kw-btn-ghost kw-btn-sm" onClick={() => workflow.updateStatus(item.id, "submitted", "Host resubmitted")}>Mark resubmitted</button>
+          </>
+        )}
+        {item.status === "approved" && (
+          <>
+            <button className="kw-btn kw-btn-accent kw-btn-sm" onClick={() => workflow.publishSubmission(item.id)}>Publish to directory →</button>
+            <button className="kw-btn kw-btn-tertiary kw-btn-sm" onClick={() => workflow.updateStatus(item.id, "submitted", "Approval reopened")}>Reopen</button>
+          </>
+        )}
+        {item.status === "published" && (
+          <>
+            <button className="kw-btn kw-btn-ghost kw-btn-sm" disabled>Live in Discover</button>
+            <button className="kw-btn kw-btn-tertiary kw-btn-sm" onClick={() => workflow.updateStatus(item.id, "approved", "Unpublished from directory")}>Unpublish</button>
+          </>
+        )}
+        {item.status === "rejected" && (
+          <button className="kw-btn kw-btn-ghost kw-btn-sm" onClick={() => workflow.updateStatus(item.id, "submitted", "Reopened after rejection")}>Reopen</button>
+        )}
+      </div>
     </div>
   );
 }
