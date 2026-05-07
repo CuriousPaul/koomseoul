@@ -20,11 +20,25 @@ npm audit --audit-level=moderate
 - `src/pages/` — Home, Discover, Schedule, Host, Admin views
 - `src/data.js` — static event and sponsor data
 - `src/shared.jsx` — shared header/footer/UI bits
+- `src/i18n.js` — bilingual dictionary (Korean/English) and `t()` helper
 - `src/styles.css` / `src/tokens.css` — styling
- - `src/submissionService.js` — repository layer (Supabase or localStorage)
+  - `src/submissionService.js` — repository layer (Supabase or localStorage)
 - `src/submissionStore.js` — React hook for submission workflow state
 - `src/lib/emailService.js` — client-side email service (Resend via Vercel serverless function)
 - `api/send-email.js` — Vercel serverless function for transactional email
+
+## Bilingual UI (Korean-first)
+
+The app defaults to Korean (`lang='kr'`). A KR/EN toggle in the header lets users switch.
+
+**How it works:**
+- All translatable strings live in `src/i18n.js` as a flat `{ en, kr }` dictionary.
+- Use `t('key', lang)` to look up a string. Falls back to English if Korean is missing.
+- Structured data labels (tracks, neighborhoods) already have `labelKr` fields in `data.js`.
+- ACCESS labels use `accessLabel(id, lang)` from `i18n.js`.
+- Admin status labels use `statusLabel(status, lang)` from `i18n.js`.
+
+**To add a new string:** add an entry to the `S` object in `src/i18n.js`, then use `t('your.key', lang)` in the component.
 
 ## Workflow
 

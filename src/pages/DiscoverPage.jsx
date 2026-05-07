@@ -3,6 +3,7 @@ import {
   TRACKS, NEIGHBORHOODS, NEIGHBORHOOD_COORDS, ACCESS, DAYS, EVENTS as STATIC_EVENTS
 } from '../data.js';
 import { KwTrackTag } from '../shared.jsx';
+import { t, accessLabel } from '../i18n.js';
 
 export default function DiscoverPage({ lang, events = STATIC_EVENTS, scheduleIds, toggleSchedule, prefilters }) {
   const [selectedTracks, setSelectedTracks] = useState(prefilters?.track ? [prefilters.track] : []);
@@ -47,12 +48,12 @@ export default function DiscoverPage({ lang, events = STATIC_EVENTS, scheduleIds
     <div className="kw-discovery">
       {/* FILTERS */}
       <aside className="kw-filters">
-        <h3>Day</h3>
+        <h3>{t('discover.day', lang)}</h3>
         <div className="group" style={{paddingTop:0}}>
           <div className={`filter-opt ${selectedDay === "all" ? "checked" : ""}`}
                onClick={() => setSelectedDay("all")}>
             <span className="label-wrap">
-              <span className="checkbox" style={{borderRadius:"50%"}}></span>All days
+              <span className="checkbox" style={{borderRadius:"50%"}}></span>{t('discover.allDays', lang)}
             </span>
             <span className="count">{events.length}</span>
           </div>
@@ -69,13 +70,13 @@ export default function DiscoverPage({ lang, events = STATIC_EVENTS, scheduleIds
         </div>
 
         <div className="group">
-          <h3>Track</h3>
-          {trackCounts.map(({t, n}) => (
-            <div key={t}
-                 className={`filter-opt ${selectedTracks.includes(t) ? "checked" : ""}`}
-                 onClick={() => toggleArr(selectedTracks, setSelectedTracks, t)}>
+          <h3>{t('discover.track', lang)}</h3>
+          {trackCounts.map(({t: trackId, n}) => (
+            <div key={trackId}
+                 className={`filter-opt ${selectedTracks.includes(trackId) ? "checked" : ""}`}
+                 onClick={() => toggleArr(selectedTracks, setSelectedTracks, trackId)}>
               <span className="label-wrap">
-                <span className="checkbox"></span>{TRACKS[t].label}
+                <span className="checkbox"></span>{lang === 'kr' ? TRACKS[trackId].labelKr : TRACKS[trackId].label}
               </span>
               <span className="count">{n}</span>
             </div>
@@ -83,13 +84,13 @@ export default function DiscoverPage({ lang, events = STATIC_EVENTS, scheduleIds
         </div>
 
         <div className="group">
-          <h3>Neighborhood</h3>
+          <h3>{t('discover.neighborhood', lang)}</h3>
           {neighCounts.map(({n, c}) => (
             <div key={n}
                  className={`filter-opt ${selectedNeighs.includes(n) ? "checked" : ""}`}
                  onClick={() => toggleArr(selectedNeighs, setSelectedNeighs, n)}>
               <span className="label-wrap">
-                <span className="checkbox"></span>{NEIGHBORHOODS[n].label}
+                <span className="checkbox"></span>{lang === 'kr' ? NEIGHBORHOODS[n].labelKr : NEIGHBORHOODS[n].label}
               </span>
               <span className="count">{c}</span>
             </div>
@@ -97,13 +98,13 @@ export default function DiscoverPage({ lang, events = STATIC_EVENTS, scheduleIds
         </div>
 
         <div className="group">
-          <h3>Access</h3>
+          <h3>{t('discover.access', lang)}</h3>
           {Object.values(ACCESS).map(a => (
             <div key={a.id}
                  className={`filter-opt ${selectedAccess.includes(a.id) ? "checked" : ""}`}
                  onClick={() => toggleArr(selectedAccess, setSelectedAccess, a.id)}>
               <span className="label-wrap">
-                <span className="checkbox"></span>{a.label}
+                <span className="checkbox"></span>{accessLabel(a.id, lang)}
               </span>
               <span className="count">{events.filter(e => e.access === a.id).length}</span>
             </div>
@@ -112,18 +113,18 @@ export default function DiscoverPage({ lang, events = STATIC_EVENTS, scheduleIds
 
         <button className="clear" onClick={() => {
           setSelectedTracks([]); setSelectedNeighs([]); setSelectedAccess([]); setSelectedDay("all");
-        }}>Clear all filters ×</button>
+        }}>{t('discover.clearFilters', lang)}</button>
       </aside>
 
       {/* LIST */}
       <main className="kw-list-col">
         <div className="kw-list-toolbar">
           <div className="count">
-            {filtered.length}<span className="small">{filtered.length === 1 ? " event" : " events"}</span>
+            {filtered.length}<span className="small">{filtered.length === 1 ? t('discover.event', lang) : t('discover.events', lang)}</span>
           </div>
           <div className="day-tabs">
             <button className={`day-tab ${selectedDay === "all" ? "active" : ""}`}
-                    onClick={() => setSelectedDay("all")}>All</button>
+                    onClick={() => setSelectedDay("all")}>{t('discover.all', lang)}</button>
             {DAYS.map(d => (
               <button key={d.id}
                       className={`day-tab ${selectedDay === d.id ? "active" : ""}`}
@@ -137,8 +138,8 @@ export default function DiscoverPage({ lang, events = STATIC_EVENTS, scheduleIds
 
         {filtered.length === 0 && (
           <div style={{textAlign:"center", padding:"96px 32px", color:"var(--fg-2)"}}>
-            <h3 className="kw-h3" style={{marginBottom:8}}>No events match your filters.</h3>
-            <p>Try clearing some filters in the rail to see more events.</p>
+            <h3 className="kw-h3" style={{marginBottom:8}}>{t('discover.emptyTitle', lang)}</h3>
+            <p>{t('discover.emptyBody', lang)}</p>
           </div>
         )}
 
@@ -150,7 +151,7 @@ export default function DiscoverPage({ lang, events = STATIC_EVENTS, scheduleIds
               {g.note && <span className="note">· {g.note}</span>}
             </div>
             {g.events.map(e => (
-              <EventRow key={e.id} ev={e}
+              <EventRow key={e.id} ev={e} lang={lang}
                         active={activeEvent?.id === e.id}
                         inSchedule={scheduleIds.includes(e.id)}
                         hasConflict={isConflict(e)}
@@ -159,7 +160,7 @@ export default function DiscoverPage({ lang, events = STATIC_EVENTS, scheduleIds
           </div>
         )) : (
           [...filtered].sort((a, b) => a.start.localeCompare(b.start)).map(e => (
-            <EventRow key={e.id} ev={e}
+            <EventRow key={e.id} ev={e} lang={lang}
                       active={activeEvent?.id === e.id}
                       inSchedule={scheduleIds.includes(e.id)}
                       hasConflict={isConflict(e)}
@@ -170,7 +171,7 @@ export default function DiscoverPage({ lang, events = STATIC_EVENTS, scheduleIds
 
       {/* MAP */}
       <aside className="kw-map-col">
-        <SeoulMap eventCounts={neighEventCount}
+        <SeoulMap eventCounts={neighEventCount} lang={lang}
                   hovered={hoveredNeigh}
                   setHovered={setHoveredNeigh}
                   highlighted={selectedNeighs}
@@ -178,7 +179,7 @@ export default function DiscoverPage({ lang, events = STATIC_EVENTS, scheduleIds
       </aside>
 
       {activeEvent && (
-        <EventModal ev={activeEvent}
+        <EventModal ev={activeEvent} lang={lang}
                     onClose={() => setActiveEvent(null)}
                     inSchedule={scheduleIds.includes(activeEvent.id)}
                     hasConflict={isConflict(activeEvent)}
@@ -188,7 +189,7 @@ export default function DiscoverPage({ lang, events = STATIC_EVENTS, scheduleIds
   );
 }
 
-function EventRow({ ev, active, inSchedule, hasConflict, onClick }) {
+function EventRow({ ev, lang, active, inSchedule, hasConflict, onClick }) {
   const cap = ev.rsvp / ev.capacity;
   const full = cap >= 1;
   return (
@@ -201,28 +202,28 @@ function EventRow({ ev, active, inSchedule, hasConflict, onClick }) {
       <div className="body">
         <h4>{ev.title}</h4>
         <div className="meta">
-          {ev.host} · {NEIGHBORHOODS[ev.neigh].label} · {ev.format}
+          {ev.host} · {lang === 'kr' ? NEIGHBORHOODS[ev.neigh].labelKr : NEIGHBORHOODS[ev.neigh].label} · {ev.format}
         </div>
         <div className="tags">
           <KwTrackTag track={ev.track} />
-          <span className="kw-pill">{ACCESS[ev.access].label}</span>
-          {inSchedule && <span className="kw-pill red">✓ In your schedule</span>}
-          {hasConflict && !inSchedule && <span className="kw-pill" style={{color:"var(--accent-deep)"}}>⚠ Conflict</span>}
+          <span className="kw-pill">{accessLabel(ev.access, lang)}</span>
+          {inSchedule && <span className="kw-pill red">{t('discover.inSchedule', lang)}</span>}
+          {hasConflict && !inSchedule && <span className="kw-pill" style={{color:"var(--accent-deep)"}}>{t('discover.conflict', lang)}</span>}
         </div>
       </div>
       <div className="rsvp-cell">
         <span className="capacity">
-          {full ? <span className="full">Waitlist</span> : `${ev.rsvp}/${ev.capacity}`}
+          {full ? <span className="full">{t('discover.waitlist', lang)}</span> : `${ev.rsvp}/${ev.capacity}`}
         </span>
         <button className="kw-btn kw-btn-ghost kw-btn-sm" onClick={(e) => { e.stopPropagation(); onClick(); }}>
-          Details →
+          {t('discover.details', lang)}
         </button>
       </div>
     </div>
   );
 }
 
-function SeoulMap({ eventCounts, hovered, setHovered, highlighted, onNeighClick }) {
+function SeoulMap({ eventCounts, lang, hovered, setHovered, highlighted, onNeighClick }) {
   return (
     <div className="kw-map-canvas">
       <svg viewBox="0 0 100 100" preserveAspectRatio="none">
@@ -259,6 +260,7 @@ function SeoulMap({ eventCounts, hovered, setHovered, highlighted, onNeighClick 
       {Object.entries(NEIGHBORHOOD_COORDS).map(([id, c]) => {
         const count = eventCounts[id] || 0;
         const isActive = highlighted.includes(id) || hovered === id;
+        const neighLabel = lang === 'kr' ? NEIGHBORHOODS[id].labelKr : c.label;
         return (
           <div key={id}
                className={`kw-map-pin ${isActive ? "active" : ""}`}
@@ -273,7 +275,7 @@ function SeoulMap({ eventCounts, hovered, setHovered, highlighted, onNeighClick 
                  }}></div>
             {count > 0 && <div className="count">{count}</div>}
             <div className="label">
-              {c.label}{count ? ` · ${count} event${count === 1 ? "" : "s"}` : " · 0"}
+              {neighLabel}{count ? ` · ${count} event${count === 1 ? "" : "s"}` : " · 0"}
             </div>
           </div>
         );
@@ -281,7 +283,7 @@ function SeoulMap({ eventCounts, hovered, setHovered, highlighted, onNeighClick 
 
       <div className="kw-map-header">
         <h3>Seoul · 서울특별시</h3>
-        <p>Click a neighborhood to filter</p>
+        <p>{t('map.clickToFilter', lang)}</p>
       </div>
 
       <div className="kw-map-controls">
@@ -290,27 +292,28 @@ function SeoulMap({ eventCounts, hovered, setHovered, highlighted, onNeighClick 
       </div>
 
       <div className="kw-map-legend">
-        <h4>Reading the map</h4>
-        <div className="row"><span className="dot" style={{background:"var(--ukf-ink)"}}></span>Pin size = event density</div>
-        <div className="row"><span className="dot" style={{background:"var(--accent)"}}></span>Selected neighborhood</div>
-        <div className="row" style={{marginTop:6, color:"var(--fg-2)", fontSize:12}}>Hover for label · click to filter</div>
+        <h4>{t('map.legend', lang)}</h4>
+        <div className="row"><span className="dot" style={{background:"var(--ukf-ink)"}}></span>{t('map.density', lang)}</div>
+        <div className="row"><span className="dot" style={{background:"var(--accent)"}}></span>{t('map.selected', lang)}</div>
+        <div className="row" style={{marginTop:6, color:"var(--fg-2)", fontSize:12}}>{t('map.hoverClick', lang)}</div>
       </div>
     </div>
   );
 }
 
-function EventModal({ ev, onClose, inSchedule, hasConflict, onToggle }) {
+function EventModal({ ev, lang, onClose, inSchedule, hasConflict, onToggle }) {
   const cap = ev.rsvp / ev.capacity;
   const full = cap >= 1;
+  const dayObj = DAYS.find(d => d.id === ev.day);
   return (
     <div className="kw-modal-backdrop" onClick={onClose}>
       <div className="kw-modal" onClick={(e) => e.stopPropagation()}>
         <div className={`kw-modal-banner ${ev.track}`}>
           <button className="kw-modal-close" onClick={onClose}>×</button>
           <div className="pills">
-            <span className="kw-pill red">{TRACKS[ev.track].label}</span>
+            <span className="kw-pill red">{lang === 'kr' ? TRACKS[ev.track].labelKr : TRACKS[ev.track].label}</span>
             <span className="kw-pill">{ev.format}</span>
-            <span className="kw-pill">{ACCESS[ev.access].label}</span>
+            <span className="kw-pill">{accessLabel(ev.access, lang)}</span>
           </div>
           <h2>{ev.title}</h2>
         </div>
@@ -319,40 +322,40 @@ function EventModal({ ev, onClose, inSchedule, hasConflict, onToggle }) {
             <div className="kw-conflict">
               <div className="icon">!</div>
               <div>
-                <h4>Sector Intentionality — Time Conflict</h4>
-                <p>This event overlaps with one already on your schedule. UKF's anti-hoarding protocol prevents you from RSVPing to two simultaneous events. Remove the conflicting event first.</p>
+                <h4>{t('modal.conflictTitle', lang)}</h4>
+                <p>{t('modal.conflictBody', lang)}</p>
               </div>
             </div>
           )}
 
           <div className="kw-modal-meta-grid">
             <div>
-              <div className="lbl">When</div>
+              <div className="lbl">{t('modal.when', lang)}</div>
               <div className="val">
-                {DAYS.find(d => d.id === ev.day).date} · {DAYS.find(d => d.id === ev.day).weekday}
+                {dayObj.date} · {dayObj.weekday}
                 <span className="small">{ev.start} — {ev.end}</span>
               </div>
             </div>
             <div>
-              <div className="lbl">Where</div>
-              <div className="val">{NEIGHBORHOODS[ev.neigh].label}<span className="small">{ev.location}</span></div>
+              <div className="lbl">{t('modal.where', lang)}</div>
+              <div className="val">{lang === 'kr' ? NEIGHBORHOODS[ev.neigh].labelKr : NEIGHBORHOODS[ev.neigh].label}<span className="small">{ev.location}</span></div>
             </div>
             <div>
-              <div className="lbl">Hosted by</div>
+              <div className="lbl">{t('modal.hostedBy', lang)}</div>
               <div className="val">{ev.host}</div>
             </div>
             <div>
-              <div className="lbl">Capacity</div>
-              <div className="val">{ev.capacity} guests<span className="small">{ev.rsvp} confirmed</span></div>
+              <div className="lbl">{t('modal.capacity', lang)}</div>
+              <div className="val">{ev.capacity} {t('modal.guests', lang)}<span className="small">{ev.rsvp} {t('modal.confirmed', lang)}</span></div>
             </div>
           </div>
 
-          <h3>About this event</h3>
+          <h3>{t('modal.aboutEvent', lang)}</h3>
           <p>{ev.blurb}</p>
 
           {ev.speakers && (
             <>
-              <h3>Speakers</h3>
+              <h3>{t('modal.speakers', lang)}</h3>
               <div className="kw-modal-speakers">
                 {ev.speakers.map((s, i) => (
                   <div className="person" key={s}>
@@ -366,16 +369,16 @@ function EventModal({ ev, onClose, inSchedule, hasConflict, onToggle }) {
             </>
           )}
 
-          <h3>Curation note</h3>
+          <h3>{t('modal.curationNote', lang)}</h3>
           <p style={{color:"var(--fg-2)", fontSize:14}}>
-            This event was reviewed and approved by the UKF programming team on June 18, 2026. RSVPs are subject to host approval — your profile and stated goals are visible to the host when you apply.
+            {t('modal.curationBody', lang)}
           </p>
         </div>
 
         <div className="kw-modal-cta">
           <div className="capacity-bar">
             <div className="lbl">
-              <span>Capacity</span>
+              <span>{t('modal.capacityLabel', lang)}</span>
               <span>{ev.rsvp} / {ev.capacity}</span>
             </div>
             <div className={`bar ${cap > 0.85 ? "warn" : ""}`}>
@@ -384,14 +387,14 @@ function EventModal({ ev, onClose, inSchedule, hasConflict, onToggle }) {
           </div>
           {inSchedule ? (
             <button className="kw-btn kw-btn-ghost" onClick={onToggle}>
-              ✓ Remove from schedule
+              {t('modal.removeSchedule', lang)}
             </button>
           ) : (
             <button className={`kw-btn ${hasConflict ? "kw-btn-primary" : "kw-btn-accent"}`}
                     disabled={hasConflict}
                     style={hasConflict ? {opacity:0.4, cursor:"not-allowed"} : {}}
                     onClick={hasConflict ? null : onToggle}>
-              {full ? "Join Waitlist" : (ev.access === "open" ? "RSVP" : ev.access === "apply" ? "Apply to Attend" : "Request Invite")} →
+              {full ? t('modal.joinWaitlist', lang) : (ev.access === "open" ? t('modal.rsvp', lang) : ev.access === "apply" ? t('modal.applyAttend', lang) : t('modal.requestInvite', lang))} →
             </button>
           )}
         </div>

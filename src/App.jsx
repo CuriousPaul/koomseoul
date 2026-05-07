@@ -22,7 +22,7 @@ const ACCENT_PALETTES = {
 export default function App() {
   const [page, setPage] = useState("home");
   const [pageProps, setPageProps] = useState(null);
-  const [lang, setLang] = useState("en");
+  const [lang, setLang] = useState("kr");
   const [scheduleIds, setScheduleIds] = useState(["e01", "e08", "e13"]);
   const workflow = useSubmissionWorkflow(getReservedEventIds(EVENTS));
   const allEvents = [...workflow.publishedEvents, ...EVENTS];
@@ -59,11 +59,12 @@ export default function App() {
       {page === "schedule" && <SchedulePage events={allEvents}
                                             scheduleIds={scheduleIds}
                                             toggleSchedule={toggleSchedule}
-                                            onNav={onNav} />}
-      {page === "host"     && <HostPage createSubmission={workflow.createSubmission} onNav={onNav} />}
-      {page === "admin"    && <AdminPage workflow={workflow} />}
+                                            onNav={onNav}
+                                            lang={lang} />}
+      {page === "host"     && <HostPage createSubmission={workflow.createSubmission} onNav={onNav} lang={lang} />}
+      {page === "admin"    && <AdminPage workflow={workflow} lang={lang} />}
 
-      {(page === "home" || page === "host") && <KwFooter />}
+      {(page === "home" || page === "host") && <KwFooter lang={lang} />}
 
       <TweaksPanel title="Tweaks">
         <TweakSection title="Accent color" subtitle="Heritage red is the UKF default. Try alternate Korean heritage tones.">
