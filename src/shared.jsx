@@ -1,15 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import { TRACKS, NEIGHBORHOODS } from './data.js';
+import { t } from './i18n.js';
 
 export function KwHeader({ active, onNav, lang, setLang, scheduleCount }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const hamburgerRef = useRef(null);
   const items = [
-    { k: "home",      label: "Overview",    kr: "개요" },
-    { k: "discover",  label: "Discover",    kr: "이벤트" },
-    { k: "schedule",  label: "My Schedule", kr: "내 일정" },
-    { k: "host",      label: "Host",        kr: "호스팅" },
-    { k: "admin",     label: "Admin",       kr: "관리자" },
+    { k: "home",      label: t('nav.overview', lang),     kr: t('nav.overview', 'kr') },
+    { k: "discover",  label: t('nav.discover', lang),     kr: t('nav.discover', 'kr') },
+    { k: "schedule",  label: t('nav.schedule', lang),     kr: t('nav.schedule', 'kr') },
+    { k: "host",      label: t('nav.host', lang),         kr: t('nav.host', 'kr') },
+    { k: "admin",     label: t('nav.admin', lang),        kr: t('nav.admin', 'kr') },
   ];
 
   const closeMenu = ({ restoreFocus = false } = {}) => {
@@ -43,7 +44,7 @@ export function KwHeader({ active, onNav, lang, setLang, scheduleCount }) {
   return (
     <header className="kw-header">
       <div className="kw-header-inner">
-        <button type="button" className="kw-brand" onClick={() => handleNav("home")} aria-label="Go to Koom Week Seoul overview">
+        <button type="button" className="kw-brand" onClick={() => handleNav("home")} aria-label={t('nav.goOverview', lang)}>
           <img src="/assets/ukf-symbol-logo.svg" alt="UKF" />
           <span className="divider"></span>
           <span className="wordmark">KOOM<span className="red">·</span>WEEK <span style={{color:"var(--fg-2)", fontWeight:500}}>SEOUL'26</span></span>
@@ -54,7 +55,7 @@ export function KwHeader({ active, onNav, lang, setLang, scheduleCount }) {
           ref={hamburgerRef}
           aria-expanded={menuOpen}
           aria-controls="kw-mobile-nav"
-          aria-label={menuOpen ? "Close menu" : "Open menu"}
+           aria-label={menuOpen ? t('nav.closeMenu', lang) : t('nav.openMenu', lang)}
           onClick={() => setMenuOpen(v => !v)}
         >
           <span className={`kw-hamburger-icon ${menuOpen ? 'open' : ''}`} />
@@ -70,7 +71,7 @@ export function KwHeader({ active, onNav, lang, setLang, scheduleCount }) {
                className={`kw-nav-link ${active === it.k ? "active" : ""}`}
                aria-current={active === it.k ? "page" : undefined}
                onClick={() => handleNav(it.k)}>
-              <span>{lang === "kr" ? it.kr : it.label}</span>
+                <span>{it.label}</span>
               {it.k === "schedule" && scheduleCount > 0 && (
                 <span className="kw-nav-count">{scheduleCount}</span>
               )}
@@ -82,7 +83,7 @@ export function KwHeader({ active, onNav, lang, setLang, scheduleCount }) {
             <button type="button" className={lang === "kr" ? "active" : ""} onClick={() => handleLang("kr")}>KR</button>
           </span>
           <button type="button" className="kw-btn kw-btn-accent kw-btn-sm kw-mobile-cta" onClick={() => handleNav("host")}>
-            {lang === "kr" ? "이벤트 호스팅" : "Submit an Event"}
+            {t('nav.submitEvent', lang)}
           </button>
         </nav>
       </div>
@@ -90,14 +91,14 @@ export function KwHeader({ active, onNav, lang, setLang, scheduleCount }) {
   );
 }
 
-export function KwFooter() {
+export function KwFooter({ lang = 'kr' }) {
   return (
     <footer className="kw-footer">
       <div className="kw-container-wide">
         <div>
           <img src="/assets/ukf-full-logo.svg" className="flogo" alt="UKF" />
           <p className="tagline">
-            Koom Week Seoul is presented by United Korean Founders. The world's largest community for Korean founders, entrepreneurs, and creators.
+            {t('footer.tagline', lang)}
           </p>
           <div className="socials">
             <a href="#"><img src="/assets/icon-linkedin.svg" alt="LinkedIn" /></a>
@@ -106,36 +107,36 @@ export function KwFooter() {
           </div>
         </div>
         <div>
-          <h4>Koom Week</h4>
+          <h4>{t('footer.colKoom', lang)}</h4>
           <ul>
-            <li><a href="#">Overview</a></li>
-            <li><a href="#">Discover Events</a></li>
-            <li><a href="#">My Schedule</a></li>
-            <li><a href="#">Speakers</a></li>
-            <li><a href="#">Sponsors</a></li>
+            <li><a href="#">{t('footer.overview', lang)}</a></li>
+            <li><a href="#">{t('footer.discoverEvents', lang)}</a></li>
+            <li><a href="#">{t('footer.mySchedule', lang)}</a></li>
+            <li><a href="#">{t('footer.speakers', lang)}</a></li>
+            <li><a href="#">{t('footer.sponsors', lang)}</a></li>
           </ul>
         </div>
         <div>
-          <h4>For Hosts</h4>
+          <h4>{t('footer.colHosts', lang)}</h4>
           <ul>
-            <li><a href="#">Submit an Event</a></li>
-            <li><a href="#">Host Guidelines</a></li>
-            <li><a href="#">Curation Criteria</a></li>
-            <li><a href="#">FAQ</a></li>
+            <li><a href="#">{t('footer.submitEvent', lang)}</a></li>
+            <li><a href="#">{t('footer.hostGuides', lang)}</a></li>
+            <li><a href="#">{t('footer.curation', lang)}</a></li>
+            <li><a href="#">{t('footer.faq', lang)}</a></li>
           </ul>
         </div>
         <div>
-          <h4>UKF Network</h4>
+          <h4>{t('footer.colNetwork', lang)}</h4>
           <ul>
-            <li><a href="#">About UKF</a></li>
+            <li><a href="#">{t('footer.aboutUkf', lang)}</a></li>
             <li><a href="#">82Startup</a></li>
             <li><a href="#">KOOM Festival NYC</a></li>
-            <li><a href="#">Membership</a></li>
+            <li><a href="#">{t('footer.membership', lang)}</a></li>
           </ul>
         </div>
         <div className="copyright">
-          <span>© 2026 United Korean Founders. Koom Week Seoul Aug 11–15, 2026.</span>
-          <span>Privacy · Terms · Code of Conduct</span>
+          <span>{t('footer.copyright', lang)}</span>
+          <span>{t('footer.legal', lang)}</span>
         </div>
       </div>
     </footer>

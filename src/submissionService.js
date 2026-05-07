@@ -21,6 +21,7 @@ function getSupabase() {
 export const isBackendAvailable = () => !!getSupabase();
 
 const TABLE = 'event_submissions';
+const PUBLIC_VIEW = 'public_published_events';
 
 const normalizeStatus = (status) => {
   if (status === 'pending') return 'submitted';
@@ -233,4 +234,50 @@ export async function syncSubmissions(submissions) {
 
 export function persistLocal(submissions) {
   localWrite(submissions);
+}
+
+// ---------------------------------------------------------------------------
+// Safe public read path — reads from public_published_events view which
+// excludes contact_email, history, flag, and other private fields.
+// Use this for the public Discover / Schedule pages.
+// ---------------------------------------------------------------------------
+
+function rowToPublicEvent(row) {
+  return {
+    id: row.published_event_id || `pub-${row.id}`,
+    title: row.title,
+    host: row.host ?? '',
+    track: row.track ?? '',
+    neigh: row.neigh ?? '',
+    day: row.day ?? '',
+    start: row.start ?? '',
+    end: row.end ?? '',
+    format: row.format ?? '',
+    access: row.access ?? '',
+    capacity: Number(row.capacity) || 60,
+    rsvp: 0,
+    status: 'approved',
+    blurb: row.blurb ?? '',
+    location: row.location || 'Venue TBA',
+    audience: row.audience ?? '',
+    speakers: Array.isArray(row.speakers) ? row.speakers : [],
+    submissionId: row.id,
+  };
+}
+
+export async function loadPublishedEvents() {
+  const sb = getSupabase();
+  if (sb) {
+    try {
+      const { data, error } = await sb
+        .from(PUBLIC_VIEW)
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data || []).map(rowToPublicEvent);
+    } catch (err) {
+      console.warn('[submissionService] Public events load failed:', err.message);
+    }
+  }
+  return [];
 }

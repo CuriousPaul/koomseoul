@@ -20,9 +20,25 @@ npm audit --audit-level=moderate
 - `src/pages/` — Home, Discover, Schedule, Host, Admin views
 - `src/data.js` — static event and sponsor data
 - `src/shared.jsx` — shared header/footer/UI bits
+- `src/i18n.js` — bilingual dictionary (Korean/English) and `t()` helper
 - `src/styles.css` / `src/tokens.css` — styling
-- `src/submissionService.js` — repository layer (Supabase or localStorage)
+  - `src/submissionService.js` — repository layer (Supabase or localStorage)
 - `src/submissionStore.js` — React hook for submission workflow state
+- `src/lib/emailService.js` — client-side email service (Resend via Vercel serverless function)
+- `api/send-email.js` — Vercel serverless function for transactional email
+
+## Bilingual UI (Korean-first)
+
+The app defaults to Korean (`lang='kr'`). A KR/EN toggle in the header lets users switch.
+
+**How it works:**
+- All translatable strings live in `src/i18n.js` as a flat `{ en, kr }` dictionary.
+- Use `t('key', lang)` to look up a string. Falls back to English if Korean is missing.
+- Structured data labels (tracks, neighborhoods) already have `labelKr` fields in `data.js`.
+- ACCESS labels use `accessLabel(id, lang)` from `i18n.js`.
+- Admin status labels use `statusLabel(status, lang)` from `i18n.js`.
+
+**To add a new string:** add an entry to the `S` object in `src/i18n.js`, then use `t('your.key', lang)` in the component.
 
 ## Workflow
 
@@ -56,6 +72,21 @@ The submission workflow can persist to Supabase instead of localStorage.
 6. See `docs/backend-workflow-notes.md` for full details and limitations.
 
 When Supabase is not configured, the app falls back to localStorage and all features work unchanged.
+
+## Email service (Resend)
+
+Transaction emails (verification, welcome, submission confirmation) go through Resend via a Vercel serverless function. The API key never reaches the client bundle.
+
+1. Sign up at [resend.com](https://resend.com) and create an API key with **Send** permission.
+2. Add to `.env.local` (or Vercel env vars):
+   ```
+   RESEND_API_KEY=re_your_key
+   RESEND_FROM_EMAIL=Koom Week Seoul <hello@koomseoul.com>
+   ```
+3. For local dev with the email endpoint, run `vercel dev` instead of `vite dev`.
+4. See `docs/email-integration.md` for trigger points, email types, and auth wiring guide.
+
+When Resend is not configured, email calls fail gracefully — the app continues to work.
 
 ## Mobile QA
 

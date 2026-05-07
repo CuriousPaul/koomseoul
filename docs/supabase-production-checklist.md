@@ -4,14 +4,14 @@ Use this checklist before deploying the Koom Seoul app with Supabase to a public
 
 ## Pre-deployment
 
-- [ ] Supabase project created and accessible
-- [ ] `docs/supabase-schema.sql` applied (creates `event_submissions` table and demo policies)
-- [ ] `docs/supabase-auth-rls.sql` applied (replaces demo policies with production RLS)
+- [x] Supabase project created and accessible (`koom-seoul`, ref: `hzuoeiorcntdntdbvkgl`)
+- [x] `docs/supabase-schema.sql` applied (creates `event_submissions` table and demo policies)
+- [x] `docs/supabase-auth-rls.sql` applied (replaces demo policies with production RLS)
 - [ ] Authentication enabled in Supabase Dashboard → Authentication → Providers
 - [ ] At least one admin user created via Dashboard → Authentication → Users
 - [ ] Admin role assigned: `INSERT INTO user_roles (user_id, role) VALUES ('user-uuid', 'admin');`
-- [ ] `.env.local` or Vercel env vars set: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`
-- [ ] Service role key is NOT exposed in client-side code or Vite env vars
+- [x] `.env.local` or Vercel env vars set: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`
+- [x] Service role key is NOT exposed in client-side code or Vite env vars
 
 ## Verify RLS Policies
 
@@ -36,18 +36,18 @@ Use this checklist before deploying the Koom Seoul app with Supabase to a public
 
 ## Frontend
 
-- [ ] `npm run build` passes with no errors
-- [ ] `npm audit --audit-level=moderate` passes
-- [ ] Admin UI shows appropriate security warning when Supabase is connected without auth
-- [ ] localStorage fallback still works when Supabase is not configured
-- [ ] Host submission form works for anonymous users (INSERT policy)
+- [x] `npm run build` passes with no errors
+- [x] `npm audit --audit-level=moderate` passes (0 vulnerabilities)
+- [x] Admin UI shows appropriate security warning when Supabase is connected without auth
+- [x] localStorage fallback still works when Supabase is not configured
+- [x] Host submission form works for anonymous users (INSERT policy)
 
 ## Post-deployment
 
 - [ ] Vercel deployment succeeds
 - [ ] Admin can log in and see all submissions
 - [ ] Host can submit new events without authentication
-- [ ] Public directory only reads from `public_published_events` or an equivalent safe API projection
+- [x] Public directory only reads from `public_published_events` or an equivalent safe API projection
 - [ ] No console errors in production
 
 ## Rollback Plan
