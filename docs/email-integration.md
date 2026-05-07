@@ -1,123 +1,107 @@
 # Email Integration Guide (Resend)
 
-Koom Seoul sends transactional email via [Resend](https://resend.com), routed through a Vercel serverless function. This keeps the API key server-side.
+Koom Seoul sends transactional email via [Resend](https://resend.com), routed through a Vercel serverless function. This keeps the API key server-side and out of the Vite browser bundle.
 
 ## Architecture
 
 ```
 Browser (src/lib/emailService.js)
-  → POST /api/send-email
+  → POST /api/send-email with { to, type, payload }
     → Vercel serverless function (api/send-email.js)
+      → render approved server-side template
       → Resend SDK → recipient inbox
 ```
 
-- **Client-side module** (`src/lib/emailService.js`): convenience wrappers that generate branded HTML and call the API endpoint. Never touches the API key.
-- **Serverless function** (`api/send-email.js`): validates input, calls Resend, returns `{ success, id }` or `{ success: false, error }`.
+Important security properties:
 
-## Setup
+- `RESEND_API_KEY` is **server-side only**. It is not prefixed with `VITE_` and must never be imported in frontend code.
+- The browser cannot submit arbitrary `subject`/`html`. The endpoint accepts only approved template `type` values and structured payload.
+- CORS allows same-origin, configured `SITE_URL`, the current Vercel deployment URL, and local dev origins only.
+- If `RESEND_TEST_MODE=true`, the endpoint returns a dry-run success without sending email.
 
-### 1. Get a Resend API key
+## Implemented email triggers
 
-Sign up at [resend.com](https://resend.com) and create an API key with **Send** permission.
+| Trigger | File | Email type |
+|---|---|---|
+| Host submits an event | `src/submissionStore.js` → `createSubmission()` | `submission_confirmation` |
+| Admin changes submission status | `src/submissionStore.js` → `updateStatus()` | `status_update` |
 
-### 2. Configure environment variables
+Both triggers are non-blocking. If Resend is unavailable, the app logs a warning and the submission/admin action still succeeds.
 
-In `.env.local` (local) or Vercel Project Settings → Environment Variables (deployed):
+## Current supported templates
+
+| Type | Purpose | Required payload | Sender default |
+|---|---|---|---|
+| `submission_confirmation` | Host submission receipt | `{ eventTitle }` | `notify@koomseoul.com` |
+| `status_update` | Admin status update to host | `{ eventTitle, status, note? }` | `notify@koomseoul.com` |
+| `welcome` | Future post-auth welcome email | `{ firstName? }` | `hello@koomseoul.com` |
+
+## Environment variables
+
+Set these in Vercel Project Settings → Environment Variables.
 
 ```
 RESEND_API_KEY=re_your_actual_key
 RESEND_FROM_EMAIL=Koom Week Seoul <hello@koomseoul.com>
+SITE_URL=https://koomseoul.vercel.app
+# Optional local/staging dry-run mode:
+# RESEND_TEST_MODE=true
 ```
 
-`RESEND_FROM_EMAIL` is optional — the serverless function falls back to branded defaults per email type.
+Local `.env.local` can use the same names. Do not prefix these with `VITE_`.
 
-### 3. Verify domain in Resend
+## Resend dashboard setup checklist
 
-Before sending to real addresses, verify your sending domain in the Resend dashboard. During development you can send to your own address or use Resend's test mode.
+1. Create or log into the Resend account.
+2. Add the sending domain you want to use, e.g. `koomseoul.com`.
+3. Add the DNS records Resend gives you:
+   - SPF / return-path record
+   - DKIM records
+   - DMARC record if not already present
+4. Wait until Resend marks the domain as **Verified**.
+5. Create an API key with send permission.
+6. In Vercel, add `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, and `SITE_URL` for Production.
+7. Redeploy production after setting env vars.
+8. Submit a test event from production and confirm the host receives the receipt email.
+9. Change the submission status in Admin and confirm the host receives the status update email.
+10. Monitor the Resend dashboard for bounces or delivery errors.
 
-### 4. Local development
+## Local development
 
-For the API endpoint to work locally, run:
+For the API endpoint to work locally, run Vercel dev so the `api/` function exists:
 
 ```bash
 vercel dev
 ```
 
-This serves both the Vite app and the `api/` serverless functions. `vite.config.js` proxies `/api` requests to `localhost:3000` where `vercel dev` listens.
+If you run plain `npm run dev`, email calls may fail gracefully because Vite alone does not execute Vercel serverless functions.
 
-If you run plain `vite dev` instead, email calls will fail gracefully — the app still works, emails are just not sent.
+For a no-send local smoke test:
 
-## Email types
-
-| Type | Purpose | Sender default |
-|------|---------|----------------|
-| `verification` | Email verification during signup | verify@koomseoul.com |
-| `welcome` | Post-verification welcome | hello@koomseoul.com |
-| `notification` | Submission confirmations, status updates | notify@koomseoul.com |
-
-## Trigger points for auth integration
-
-When Supabase Auth (or any auth provider) is wired up, call these functions:
-
-### After user signs up
-
-```js
-import { sendVerificationEmail } from './lib/emailService';
-
-// After Supabase signUp returns
-const { data, error } = await supabase.auth.signUp({ email, password });
-if (!error) {
-  // Supabase sends its own verification email by default.
-  // If you want to use Resend instead, disable Supabase's built-in email
-  // in the Dashboard → Authentication → Email → "Confirm email" toggle,
-  // then send your own:
-  await sendVerificationEmail(data.user.email, verificationUrl);
-}
+```bash
+RESEND_TEST_MODE=true vercel dev
 ```
 
-### After email is verified
+Then submit an event and verify the API returns success without hitting Resend.
 
-```js
-import { sendWelcomeEmail } from './lib/emailService';
+## Supabase Auth email boundary
 
-// In your auth state change listener or on the confirmation callback page
-await sendWelcomeEmail(user.email, user.user_metadata?.first_name);
-```
+Supabase Auth confirmation / magic link / password reset emails are still handled by Supabase unless configured separately in the Supabase Dashboard.
 
-### After host submits an event
+For auth emails, there are two future options:
 
-```js
-import { sendSubmissionConfirmationEmail } from './lib/emailService';
+1. **Supabase built-in SMTP using Resend SMTP** — recommended if Supabase Dashboard supports the needed SMTP settings for this project.
+2. **Custom auth callback flow** — more control, but higher scope and security risk.
 
-// In the submission workflow, after the submission is saved
-await sendSubmissionConfirmationEmail(submission.contactEmail, submission.title);
-```
-
-### After admin approves / rejects (future)
-
-```js
-// When this flow is built:
-await sendStatusUpdateEmail(hostEmail, eventTitle, 'approved');
-```
-
-## Graceful degradation
-
-The email service never blocks or crashes the app:
-
-- If `RESEND_API_KEY` is not set, the serverless function returns 503.
-- If the fetch fails (network error, local dev without `vercel dev`), the client module returns `{ success: false }` with a `console.warn`.
-- All email functions return `{ success: boolean }` — callers can check but are not required to.
-
-## Adding a new email type
-
-1. Add a convenience wrapper in `src/lib/emailService.js` following the existing pattern.
-2. (Optional) Add a sender default in `api/send-email.js` → `TYPE_SENDERS`.
-3. Wire the call at the appropriate trigger point.
+This implementation intentionally completes the operational host/admin transactional email foundation first and does not replace Supabase Auth's built-in auth email flow yet.
 
 ## Production checklist
 
-- [ ] Resend domain verified (SPF, DKIM, DMARC configured)
-- [ ] `RESEND_API_KEY` set in Vercel environment variables
-- [ ] `RESEND_FROM_EMAIL` matches verified domain
-- [ ] Test send to a real address succeeds
-- [ ] Monitor Resend dashboard for delivery failures
+- [ ] Resend domain verified
+- [ ] `RESEND_API_KEY` set in Vercel Production
+- [ ] `RESEND_FROM_EMAIL` matches a verified domain
+- [ ] `SITE_URL=https://koomseoul.vercel.app` set in Vercel Production
+- [ ] Production redeployed after env vars are set
+- [ ] Host submission receipt email tested
+- [ ] Admin status update email tested
+- [ ] Resend dashboard checked for delivery failures
