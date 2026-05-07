@@ -1,0 +1,9 @@
+-- Environment-specific admin assignment was applied to the remote Supabase DB on 2026-05-07.
+--
+-- The real auth.users UUID is intentionally not committed to the public repo.
+-- To assign or rotate admins in another environment, create the user in
+-- Supabase Dashboard → Authentication → Users, then run:
+--
+-- insert into user_roles (user_id, role)
+-- values ('<auth-user-uuid>'::uuid, 'admin')
+-- on conflict (user_id) do update set role = excluded.role;
