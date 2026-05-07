@@ -10,6 +10,10 @@ import {
   loadLocalSubmissions,
   loadPublishedEvents,
 } from './submissionService.js';
+import {
+  sendSubmissionConfirmationEmail,
+  sendStatusUpdateEmail,
+} from './lib/emailService.js';
 
 const nowIso = () => new Date().toISOString();
 
@@ -116,6 +120,12 @@ export function useSubmissionWorkflow(reservedEventIds = new Set()) {
       });
     }
 
+    sendSubmissionConfirmationEmail(submission.contactEmail, submission.title).then((result) => {
+      if (!result.success) {
+        console.warn('[submissionStore] Submission confirmation email not sent:', result.error);
+      }
+    });
+
     setSubmissions((prev) => [submission, ...prev]);
     return submission;
   }, [backendMode]);
@@ -128,14 +138,21 @@ export function useSubmissionWorkflow(reservedEventIds = new Set()) {
 
     setSubmissions(apply);
 
-    if (backendMode) {
-      const current = submissions.find((item) => item.id === id);
-      if (current) {
-        const audited = addAudit({ ...current, status }, status, note || statusLabels[status] || status);
-        updateSubmissionRemote(id, audited).then((remote) => {
-          if (remote) loadFromService().then(setSubmissions);
-        });
-      }
+    const current = submissions.find((item) => item.id === id);
+
+    if (current?.contactEmail) {
+      sendStatusUpdateEmail(current.contactEmail, current.title, status, note || statusLabels[status] || status).then((result) => {
+        if (!result.success) {
+          console.warn('[submissionStore] Status update email not sent:', result.error);
+        }
+      });
+    }
+
+    if (backendMode && current) {
+      const audited = addAudit({ ...current, status }, status, note || statusLabels[status] || status);
+      updateSubmissionRemote(id, audited).then((remote) => {
+        if (remote) loadFromService().then(setSubmissions);
+      });
     }
   }, [backendMode, submissions]);
 
